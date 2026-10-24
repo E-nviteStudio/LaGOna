@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="theme-color" content="#0b1f4a">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Laguna Smart Bus</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0b1f4a;--navy2:#16336f;--ink:#14213d;--mut:#5b6784;--bg:#f3f5f9;--card:#fff;--line:#e0e5ee;--teal:#0f9d8a;--tealbg:#dff5f1;--org:#b45f00;--orgbg:#fff0dc;--red:#d64550;--redbg:#fde6e8;--blue:#2563eb;--bluebg:#e3ecff;--yel:#f4c430;--r:14px;--sh:0 1px 2px rgba(11,31,74,.06),0 6px 18px rgba(11,31,74,.07);--f:'Plus Jakarta Sans',system-ui,Segoe UI,sans-serif;color-scheme:light dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--ink:#e8edf8;--mut:#9aa6c4;--bg:#0a1226;--card:#121c38;--line:#24304f;--tealbg:#0e3a3a;--orgbg:#3d2a0e;--org:#f0a040;--redbg:#40191e;--bluebg:#172a57}}
+:root[data-theme=light]{color-scheme:light}
+:root[data-theme=dark]{color-scheme:dark;--ink:#e8edf8;--mut:#9aa6c4;--bg:#0a1226;--card:#121c38;--line:#24304f;--tealbg:#0e3a3a;--orgbg:#3d2a0e;--org:#f0a040;--redbg:#40191e;--bluebg:#172a57}
+*,*:before,*:after{box-sizing:inherit}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.55 var(--f)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--navy);z-index:30}
+h1,h2,h3{line-height:1.2;margin:0 0 .5em}h1{font-size:clamp(1.9rem,4.5vw,3rem);font-weight:800;letter-spacing:-.02em}h2{font-size:1.5rem;font-weight:800}h3{font-size:1.05rem;font-weight:700}p{margin:0 0 .8em}
+.wrap{max-width:1120px;margin:0 auto;padding:0 18px}.mut{color:var(--mut)}.skip{position:absolute;left:-999px}.skip:focus{left:8px;top:8px;background:#fff;padding:8px;z-index:99}
+:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.top{background:var(--navy);color:#fff;position:sticky;top:env(safe-area-inset-top,0px);z-index:40}
+.bar{display:flex;align-items:center;gap:14px;min-height:62px;flex-wrap:wrap;padding-top:6px;padding-bottom:6px}
+.brand{display:flex;align-items:center;gap:10px;color:#fff;text-decoration:none;font-size:1.05rem}.logo{background:var(--teal);border-radius:9px;padding:5px 8px;font-weight:800;font-size:.8rem}
+nav{display:flex;gap:2px;flex:1;flex-wrap:wrap}nav button{background:none;border:0;color:#c9d4f0;font:600 14px var(--f);padding:9px 12px;border-radius:9px;cursor:pointer}nav button:hover,nav button[aria-current=page]{background:rgba(255,255,255,.12);color:#fff}
+.tools{display:flex;gap:8px;align-items:center}select,input{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%}
+.tools select{width:auto;background:var(--navy2);color:#fff;border-color:#33509a}.ic{position:relative;background:var(--navy2);border:1px solid #33509a;color:#fff;border-radius:10px;padding:8px 11px;cursor:pointer}
+.ic i{position:absolute;top:-6px;right:-6px;background:var(--org);color:#fff;font:700 11px var(--f);border-radius:9px;padding:0 6px;font-style:normal}.ic i:empty{display:none}
+.hero{background:var(--navy);color:#fff;padding:44px 0 90px}.hero p{color:#c9d4f0;max-width:56ch}
+.line{display:flex;align-items:center;margin:26px 0 0;max-width:640px}.stop{width:14px;height:14px;border-radius:50%;background:#fff;border:3px solid var(--navy);box-shadow:0 0 0 2px #8ea4d8;flex:none;position:relative}
+.stop span{position:absolute;top:20px;left:50%;transform:translateX(-50%);font-size:12px;white-space:nowrap;color:#c9d4f0}.seg{height:8px;flex:1;position:relative;border-radius:4px}.seg b{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);font-size:11.5px;white-space:nowrap;font-weight:600}
+.sA{background:var(--teal)}.sB{background:var(--blue)}.sC{background:#33509a}
+.panel{background:var(--card);border-radius:18px;box-shadow:0 12px 40px rgba(11,31,74,.22);padding:20px;margin-top:-62px;position:relative}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;align-items:end}label{font-size:13px;font-weight:600;color:var(--mut);display:block}label>*{margin-top:4px;color:var(--ink)}
+.btn{font:700 14px var(--f);border:0;border-radius:11px;padding:11px 18px;cursor:pointer;background:var(--navy);color:#fff}.btn:hover{background:var(--navy2)}.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.t{background:var(--teal)}.btn.g{background:none;color:var(--ink);border:1px solid var(--line)}.btn.sm{padding:7px 12px;font-size:13px}.btn.r{background:var(--red)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh);padding:18px}
+.sec{padding:34px 0}.grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}.list{display:grid;gap:12px}
+.badge{display:inline-block;font:700 12px var(--f);padding:3px 10px;border-radius:99px;background:var(--bg);color:var(--mut)}.badge.g{background:var(--tealbg);color:var(--teal)}.badge.o{background:var(--orgbg);color:var(--org)}.badge.r{background:var(--redbg);color:var(--red)}.badge.b{background:var(--bluebg);color:var(--blue)}
+.res{display:grid;grid-template-columns:1fr auto;gap:10px 20px;align-items:center}.res .big{font-size:1.3rem;font-weight:800}.meta{display:flex;gap:14px;flex-wrap:wrap;font-size:13.5px;color:var(--mut)}
+.meter{height:6px;background:var(--line);border-radius:4px;overflow:hidden;width:120px;margin-top:6px}.meter i{display:block;height:100%;background:var(--teal)}
+.empty{text-align:center;padding:30px;color:var(--mut);border:2px dashed var(--line);border-radius:var(--r)}
+.note{background:var(--orgbg);color:var(--org);border-radius:10px;padding:8px 12px;font-size:13px;font-weight:600}
+dialog{border:0;border-radius:18px;padding:0;width:min(940px,96vw);max-height:92vh;background:var(--card);color:var(--ink);box-shadow:0 20px 60px rgba(0,0,0,.4)}dialog::backdrop{background:rgba(7,15,38,.6)}
+.dh{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--line)}.db{padding:20px;overflow:auto;max-height:78vh}.split{display:grid;grid-template-columns:minmax(260px,330px) 1fr;gap:22px}
+.bus{background:var(--bg);border:2px solid var(--line);border-radius:26px 26px 14px 14px;padding:14px;max-width:300px;margin:auto}.front{display:flex;justify-content:space-between;font-size:12px;font-weight:600;color:var(--mut);padding:2px 6px 10px;border-bottom:2px dashed var(--line);margin-bottom:10px}
+.srow{display:flex;gap:6px;margin-bottom:6px;justify-content:center}.aisle{width:26px}.seat{width:48px;height:44px;border-radius:9px 9px 5px 5px;border:2px solid transparent;font:700 13px var(--f);cursor:pointer;background:var(--tealbg);color:var(--teal);border-color:var(--teal)}
+.seat.mine{background:var(--blue);color:#fff;border-color:var(--blue)}.seat.occupied,.seat.blocked{background:var(--redbg);color:var(--red);border-color:var(--red);cursor:not-allowed}.seat.blocked{background-image:repeating-linear-gradient(45deg,transparent 0 5px,rgba(214,69,80,.25) 5px 7px)}
+.seat.pending,.seat.held{background:#fff6d1;color:#7a5d00;border-color:var(--yel)}.seat.held{cursor:not-allowed}.leg{display:flex;gap:12px;flex-wrap:wrap;font-size:12.5px;margin-top:14px;justify-content:center}.leg i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+dl{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:12px 0}dt{color:var(--mut)}dd{margin:0;font-weight:600;text-align:right}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line)}th{color:var(--mut);font-weight:600}.tw{overflow-x:auto}
+.steps{display:flex;gap:4px;margin:12px 0;flex-wrap:wrap}.steps span{flex:1;min-width:84px;font-size:11.5px;text-align:center;padding-top:8px;border-top:4px solid var(--line);color:var(--mut)}.steps span.on{border-color:var(--teal);color:var(--teal);font-weight:700}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--navy);color:#fff;padding:12px 18px;border-radius:12px;z-index:99;box-shadow:var(--sh);max-width:92vw;opacity:0;pointer-events:none;transition:opacity .2s}.toast.on{opacity:1}
+.bal{font-size:2rem;font-weight:800}.cardviz{background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;border-radius:16px;padding:20px;min-height:150px;display:flex;flex-direction:column;justify-content:space-between}
+footer{background:var(--navy);color:#c9d4f0;padding:28px 0;font-size:13.5px;margin-top:30px}
+@media(max-width:720px){.split{grid-template-columns:1fr}.res{grid-template-columns:1fr}nav{order:3;flex-basis:100%}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+@media print{body>*:not(dialog){display:none!important}dialog{box-shadow:none}.dh button,.noprint{display:none}}
+#map{height:430px;border-radius:14px;border:1px solid var(--line);z-index:0}.busico{font-size:26px;line-height:30px;text-align:center}
+</style>
+<style id="ui2">
+/* ===== UI refresh: design tokens ===== */
+:root{--r:16px;--sh:0 1px 2px rgba(11,31,74,.05),0 4px 14px rgba(11,31,74,.06);--sh2:0 2px 4px rgba(11,31,74,.06),0 16px 36px rgba(11,31,74,.13);--yelbg:#fff6d1;--yeltx:#7a5d00;--ring:rgba(37,99,235,.28);--hov:#b8c3da}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--yelbg:#3a3010;--yeltx:#f4d56a;--sh:0 1px 2px rgba(0,0,0,.4);--sh2:0 16px 36px rgba(0,0,0,.5);--hov:#3a4a73;--ring:rgba(96,150,255,.35)}}
+:root[data-theme=dark]{--yelbg:#3a3010;--yeltx:#f4d56a;--sh:0 1px 2px rgba(0,0,0,.4);--sh2:0 16px 36px rgba(0,0,0,.5);--hov:#3a4a73;--ring:rgba(96,150,255,.35)}
+body{-webkit-font-smoothing:antialiased;font-feature-settings:"tnum" 1,"cv11" 1}
+::selection{background:rgba(15,157,138,.28)}
+h1,h2{letter-spacing:-.02em}
+.sec{padding:40px 0}.sec>h2::after{content:"";display:block;width:34px;height:3px;border-radius:3px;background:var(--teal);margin-top:8px}
+/* ===== header ===== */
+.top{background:rgba(11,31,74,.86);-webkit-backdrop-filter:saturate(1.5) blur(14px);backdrop-filter:saturate(1.5) blur(14px);border-bottom:1px solid rgba(255,255,255,.08)}
+.brand b{font-weight:800;letter-spacing:-.01em}
+.logo{background:linear-gradient(135deg,#19c3aa,#0f9d8a 55%,#0a7f70);border-radius:10px;padding:6px 9px;letter-spacing:.05em;box-shadow:0 4px 12px rgba(15,157,138,.45)}
+nav{gap:4px}nav button{position:relative;border-radius:10px;transition:background .15s,color .15s}
+nav button[aria-current=page]{background:rgba(255,255,255,.14)}
+nav button[aria-current=page]::after{content:"";position:absolute;left:12px;right:12px;bottom:3px;height:2px;border-radius:2px;background:#2dd4bf}
+.ic{border-radius:11px;transition:background .15s}.ic:hover{background:#1d3f86}
+.tools select{min-height:40px;padding:8px 10px}
+/* ===== hero ===== */
+.hero{position:relative;overflow:hidden;padding:60px 0 108px;background:radial-gradient(900px 420px at 88% -10%,rgba(45,212,191,.32),transparent 60%),radial-gradient(700px 380px at 0% 110%,rgba(37,99,235,.38),transparent 60%),linear-gradient(180deg,#0b1f4a,#091a3d)}
+.hero::before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);background-size:44px 44px;-webkit-mask-image:linear-gradient(180deg,#000,transparent 85%);mask-image:linear-gradient(180deg,#000,transparent 85%)}
+.hero .wrap{position:relative}.hero h1{max-width:19ch;text-wrap:balance}
+.hero h1::before{content:"Laguna · Metro Manila";display:block;font:700 12px var(--f);letter-spacing:.16em;text-transform:uppercase;color:#7be0d0;margin-bottom:14px}
+.hero p{font-size:1.05rem;line-height:1.6}
+.seg{height:6px}.stop{box-shadow:0 0 0 2px #8ea4d8,0 0 14px rgba(142,164,216,.5)}
+/* ===== search panel & form controls ===== */
+.panel{margin-top:-72px;padding:24px;border:1px solid var(--line);border-radius:22px;box-shadow:0 28px 60px -14px rgba(11,31,74,.38),0 2px 6px rgba(11,31,74,.08)}
+label{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}label>*{text-transform:none;letter-spacing:normal}
+select,input{min-height:44px;border-radius:12px;transition:border-color .15s,box-shadow .15s}
+select:hover,input:hover{border-color:var(--hov)}
+select:focus,input:focus{outline:0;border-color:var(--blue);box-shadow:0 0 0 4px var(--ring)}
+/* ===== buttons ===== */
+.btn{min-height:42px;border-radius:12px;box-shadow:0 1px 2px rgba(11,31,74,.22);transition:transform .12s,box-shadow .15s,background .15s}
+.btn:hover{transform:translateY(-1px);box-shadow:0 8px 18px rgba(11,31,74,.24)}.btn:active{transform:none;box-shadow:none}
+.btn:disabled,.btn:disabled:hover{transform:none;box-shadow:none}
+.btn.t{background:linear-gradient(180deg,#13b8a1,#0f9d8a)}.btn.t:hover{background:linear-gradient(180deg,#16c5ad,#0d8f7d)}
+.btn.g{background:transparent;box-shadow:none}.btn.g:hover{background:var(--bg);box-shadow:none;transform:none}
+footer .btn.g:hover{background:rgba(255,255,255,.12)}
+.btn.r:hover{background:#c23a45}.btn.sm{min-height:34px;padding:6px 13px}
+/* ===== cards, trip results, badges ===== */
+.card{border-radius:var(--r);transition:box-shadow .2s,transform .2s,border-color .2s}
+.grid>.card:hover{box-shadow:var(--sh2);transform:translateY(-2px)}
+.res{position:relative;overflow:hidden;padding:20px 24px 20px 28px}
+.res::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--teal)}
+.res:has(.badge.o)::before{background:var(--org)}.res:has(.badge.r)::before{background:var(--red)}
+.res:hover{border-color:var(--hov);box-shadow:var(--sh2)}
+.res .big{font-size:1.25rem;letter-spacing:-.01em;margin:8px 0 4px}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:3px 11px}
+.badge.g::before,.badge.o::before,.badge.r::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.meter{height:8px;width:140px;border-radius:99px}.meter i{border-radius:99px;background:linear-gradient(90deg,#0f9d8a,#2dd4bf)}
+.empty{background:var(--card)}.note{border-left:3px solid currentColor}
+/* ===== dialog, seat map ===== */
+dialog{border:1px solid var(--line);border-radius:22px;overflow:hidden;box-shadow:0 30px 80px rgba(3,10,30,.5)}
+dialog[open]{animation:pop .22s cubic-bezier(.2,.8,.2,1)}@keyframes pop{from{opacity:0;transform:translateY(12px) scale(.98)}}
+dialog::backdrop{background:rgba(7,15,38,.55);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+.dh{padding:16px 22px}.db{padding:22px}
+.bus{background:linear-gradient(180deg,var(--bg),var(--card));border-radius:38px 38px 16px 16px;padding:18px 16px 16px;box-shadow:var(--sh)}
+.seat{height:46px;border-radius:12px 12px 6px 6px;transition:transform .12s,box-shadow .12s,background .12s}
+.seat:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 6px 14px rgba(15,157,138,.28)}
+.seat.mine{transform:translateY(-1px);box-shadow:0 0 0 4px var(--ring),0 6px 14px rgba(37,99,235,.4)}
+.seat.pending,.seat.held{background:var(--yelbg);color:var(--yeltx)}
+dl{background:var(--bg);border-radius:12px;padding:12px 14px}dt{font-size:13px}
+/* ===== tables, progress, transit card ===== */
+th{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}td{font-variant-numeric:tabular-nums}
+tbody tr:hover{background:var(--bg)}tbody tr:last-child td{border-bottom:0}
+.steps span{position:relative;border-top:0;padding-top:14px}
+.steps span::before{content:"";position:absolute;top:0;left:0;right:0;height:5px;border-radius:5px;background:var(--line)}
+.steps span.on::before{background:linear-gradient(90deg,var(--teal),#2dd4bf)}
+.cardviz{position:relative;overflow:hidden;min-height:184px;border-radius:20px;box-shadow:var(--sh2);background:radial-gradient(circle at 100% 0,rgba(45,212,191,.35),transparent 55%),linear-gradient(135deg,#0b1f4a,#1d4296)}
+.cardviz::before{content:"";position:absolute;top:22px;right:22px;width:44px;height:33px;border-radius:7px;background:linear-gradient(135deg,#f6dd92,#c9a23f)}
+.cardviz::after{content:"";position:absolute;left:-90px;bottom:-150px;width:280px;height:280px;border-radius:50%;border:1px solid rgba(255,255,255,.12)}
+.bal{letter-spacing:-.02em}
+/* ===== toast, map, footer ===== */
+.toast{border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:13px 20px;transform:translate(-50%,8px);transition:opacity .2s,transform .2s}.toast.on{transform:translate(-50%,0)}
+#map{border-radius:18px;box-shadow:var(--sh)}
+footer{margin-top:48px;padding:36px 0;background:linear-gradient(180deg,#0b1f4a,#071536)}
+@media(max-width:720px){.hero{padding:44px 0 96px}.panel{padding:18px;border-radius:18px}nav{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}nav::-webkit-scrollbar{display:none}nav button{flex:none;white-space:nowrap}.res{padding:18px 18px 18px 22px}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<a class="skip" href="#app">Skip to content</a>
+<header class="top"><div class="wrap bar">
+<a class="brand" href="#find" data-act="nav" data-v="find"><span class="logo">LSB</span><b data-brand>Laguna Smart Bus</b></a>
+<nav id="nav" aria-label="Main"></nav>
+<div class="tools"><select id="role" aria-label="Demo user"><option value="A">Passenger A: Ana</option><option value="B">Passenger B: Ben</option><option value="OP">Operator staff</option></select>
+<button class="ic" id="bell" data-act="bell" aria-label="Notifications">🔔<i id="bc"></i></button></div>
+</div></header>
+<main id="app"></main>
+<footer><div class="wrap"><b data-brand>Laguna Smart Bus</b> is a demonstration prototype. Stations, schedules, fares and bus numbers are sample data and are not connected to LLI, HM Transport, DLTB Co. or JAC Liner.
+<p style="margin-top:10px">Contact: support@example.com (placeholder) · Policies: placeholder · <button class="btn sm g" style="color:#fff;border-color:#5b73b5" data-act="reset">Reset demo</button></p></div></footer>
+<dialog id="dlg" aria-label="Booking details"></dialog><div id="toast" class="toast" role="status" aria-live="polite"></div>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+'use strict';
+/* ========= CONFIG & SAMPLE DATA (all simulated) ========= */
+const BRAND='Laguna Smart Bus', HOLD_SEC=120, SEATS=50, MPK=1.5; // 50-seater: 1 front + 11 rows of 4 + 5 in the back row
+const STOPS=[{n:'Sta. Cruz',km:0,m:'Santa Cruz, Laguna',lat:14.2785,lng:121.4161},{n:'Cubao',km:98,m:'Quezon City',lat:14.6197,lng:121.0537},{n:'Buendia',km:112,m:'Makati / Pasay',lat:14.5547,lng:121.0244},{n:'Alabang',km:130,m:'Muntinlupa',lat:14.4181,lng:121.0300}]; // sample distances, not official
+const OPS=[{id:'LLI',mult:1,type:'Aircon (sample)',times:['05:30','08:15','13:00','17:45'],ann:'Sample announcement: no active advisories.'},
+{id:'HM Transport',mult:1.05,type:'Aircon (sample)',times:['06:00','09:30','14:15','18:30'],ann:'Sample announcement: schedule is for demo only.'},
+{id:'DLTB Co.',mult:.95,type:'Ordinary (sample)',times:['05:00','07:45','12:30','16:00'],ann:'Sample announcement: extra trips on weekends (demo).'},
+{id:'JAC Liner',mult:1.1,type:'Deluxe (sample)',times:['06:45','10:00','15:00','19:00'],ann:'Sample announcement: seat holds last 2 minutes.'}];
+const FARE={base:15,perKm:1.85,min:25}, DISC=.2, CATS={Regular:0,Student:DISC,Senior:DISC,PWD:DISC}; // 20% discount (sample fare rule, not official)
+const PAX={A:{name:'Ana Reyes',card:'450012340001'},B:{name:'Ben Cruz',card:'450012340002'}};
+const ADV=['Confirmed','Checked In','Boarded','Approaching Destination','Alighting Pending','Alighted'];
+const OPLBL={'Confirmed':'Manual check-in','Checked In':'Confirm boarding','Boarded':'Near destination','Approaching Destination':'Request exit check','Alighting Pending':'Confirm exit'};
+const LBL={free:'available',mine:'selected by you',occupied:'occupied',blocked:'unavailable',pending:'awaiting exit confirmation of previous passenger',held:'held by another passenger'};
+/* ========= HELPERS ========= */
+const $=(s,r=document)=>r.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const peso=n=>'₱'+Number(n).toFixed(2), stamp=()=>new Date().toLocaleString('en-PH',{dateStyle:'medium',timeStyle:'short'});
+const ymd=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); // local date, not UTC
+const today=()=>ymd(new Date()), mask=c=>'•••• '+String(c).slice(-4);
+const norm=v=>String(v||'').replace(/[^0-9a-f]/gi,'').toLowerCase(); // card ids: digits, or hex for NFC serials
+const hash=s=>[...s].reduce((a,c)=>(a*31+c.charCodeAt(0))>>>0,7);
+const fmtT=m=>{m=((m%1440)+1440)%1440;return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0')};
+const stopTime=(tr,i)=>fmtT(+tr.time.slice(0,2)*60+ +tr.time.slice(3)+Math.round(STOPS[i].km*MPK));
+let tt;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),3200)}
+/* ========= STORE (localStorage = prototype only; a real system needs a transactional backend) ========= */
+const KEY='lsb_demo_v1';
+const fresh=()=>({pax:'A',view:'find',bookings:[],txs:[],cards:{'450012340001':{owner:'A',bal:500,status:'Active'},'450012340002':{owner:'B',bal:300,status:'Active'}},notes:[],log:[],holds:{},watch:[],link:{},n:1});
+let S;try{S=Object.assign(fresh(),JSON.parse(localStorage.getItem(KEY))||{})}catch(e){S=fresh()}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+S.link=S.link||{};for(const k in S.link)if(PAX[k]&&S.cards[S.link[k]])PAX[k].card=S.link[k];
+S.txs.forEach(x=>{if(x.status==='Pending')x.status='Failed'}); // page closed mid-payment: nothing was charged
+const who=()=>S.pax==='OP'?'Staff':PAX[S.pax].name;
+const note=(p,t)=>S.notes.unshift({pax:p,text:t,ts:stamp(),read:false});
+const logIt=(action,rec)=>S.log.unshift({ts:stamp(),who:who(),action,rec});
+const nid=()=>S.n++;
+/* ========= TRIPS, FARES, SEGMENT AVAILABILITY ========= */
+function tripsFor(date){return OPS.flatMap(o=>o.times.map(t=>({id:`${date}|${o.id}|${t}`,date,op:o,time:t,bus:`${o.id.slice(0,3).toUpperCase().replace(/\W/g,'')}-${100+hash(o.id+t)%900}`})))}
+const tripById=id=>tripsFor(id.split('|')[0]).find(x=>x.id===id);
+const blocked=(tr,s)=>s===1&&hash(tr.id)%3===0;
+const SEEDC=new Map();
+function seeds(tr){let o=SEEDC.get(tr.id);if(o)return o;o=[];for(let s=1;s<=SEATS;s++){if(s===11||s===12)continue;const h=hash(tr.id+s);if(h%4===0)o.push({seat:s,from:h%2,to:2+(h>>>3)%2,status:'Boarded',seed:1})}SEEDC.set(tr.id,o);return o}
+const allB=tr=>[...seeds(tr),...S.bookings.filter(b=>b.tripId===tr.id&&b.status!=='Cancelled')];
+const hk=(tr,s)=>tr.id+'#'+s;
+const departed=(tr,f)=>new Date(tr.date+'T'+tr.time+':00').getTime()+Math.round(STOPS[f].km*MPK)*60000<=Date.now(); // bus already passed boarding stop f
+function sweep(){const n=Date.now();for(const k in S.holds)if(S.holds[k].exp<=n)delete S.holds[k]}
+function fare(op,f,t,cat){const km=STOPS[t].km-STOPS[f].km,b=Math.round(Math.max(FARE.min,(FARE.base+km*FARE.perKm)*op.mult)*4)/4,d=Math.round(b*(CATS[cat]||0)*100)/100;return{km,base:b,disc:d,total:Math.round((b-d)*100)/100}}
+/* A seat is reusable for [f,t) only when no booking overlaps AND every earlier passenger on that seat has CONFIRMED exit (status Alighted).
+   Scheduled arrival time never frees a seat. */
+function seatState(tr,s,f,t){
+ if(blocked(tr,s))return'blocked';let st='free';
+ for(const b of allB(tr)){if(b.seat!==s)continue;if(b.from<t&&f<b.to)return'occupied';if(b.to<=f&&b.status!=='Alighted')st='pending'}
+ sweep();const h=S.holds[hk(tr,s)];
+ if(h&&h.pax!==S.pax)return'held';
+ if(st==='free'&&h)return'mine';return st}
+const avail=(tr,f,t)=>{let n=0;for(let s=1;s<=SEATS;s++){const x=seatState(tr,s,f,t);if(x==='free'||x==='mine')n++}return n};
+/* ========= UI STATE ========= */
+const UI={f:0,t:1,date:today(),time:'any',op:'all',cat:'Regular',trip:null,seat:null,card:null,busy:false,mode:'',opTrip:null,q:'',prog:0,trk:null};
+if(tripsFor(today()).every(x=>departed(x,0)))UI.date=ymd(new Date(Date.now()+864e5)); // all of today's buses have left: default to tomorrow
+const app=$('#app'),dlg=$('#dlg');
+const opts=(arr,sel,off=0)=>arr.map((x,i)=>`<option value="${i+off}" ${i+off===sel?'selected':''}>${esc(x.n||x)}</option>`).join('');
+/* ========= NAV / ROUTING ========= */
+const VIEWS={find:'Find a Bus',routes:'Routes & Stations',track:'Track Bus',trips:'My Bookings',card:'Transit Card',ops:'Operator'};
+function renderNav(){const ok=S.pax==='OP'?['find','routes','track','ops']:['find','routes','track','trips','card'];if(!ok.includes(S.view))S.view='find';
+ $('#nav').innerHTML=ok.map(v=>`<button data-act="nav" data-v="${v}" ${S.view===v?'aria-current="page"':''}>${VIEWS[v]}</button>`).join('');
+ $('#role').value=S.pax;const c=S.notes.filter(n=>n.pax===S.pax&&!n.read).length;$('#bc').textContent=c||'';$('#bell').style.display=S.pax==='OP'?'none':''}
+function render(){dropMap();renderNav();({find:rFind,routes:rRoutes,track:rTrack,trips:rTrips,card:rCard,ops:rOps})[S.view]();document.querySelectorAll('[data-brand]').forEach(e=>e.textContent=BRAND);save()}
+/* ========= FIND A BUS ========= */
+function rFind(){app.innerHTML=`<section class="hero"><div class="wrap"><h1>Reserve your seat by stop, not just by bus.</h1>
+<p>Search Laguna bus trips, pick a seat for your exact segment, pay with a transit card and ride with a digital ticket. Demo data only.</p>
+<div class="line" aria-hidden="true"><i class="stop"><span>Sta. Cruz</span></i><div class="seg sA"><b style="color:#7be0d0">Ana · Seat 12</b></div><i class="stop"><span>Cubao</span></i><div class="seg sB"><b style="color:#9dbcff">Ben · Seat 12</b></div><i class="stop"><span>Buendia</span></i><div class="seg sB"></div><i class="stop"><span>Alabang</span></i></div></div></section>
+<div class="wrap"><form class="panel" id="sf" aria-label="Journey search"><div class="fgrid">
+<label>From<select id="sf-f">${opts(STOPS.slice(0,3),UI.f)}</select></label>
+<label>To<select id="sf-t">${opts(STOPS.slice(UI.f+1),UI.t,UI.f+1)}</select></label>
+<label>Date<input type="date" id="sf-d" value="${UI.date}" min="${today()}" required></label>
+<label>Departure<select id="sf-h">${['any:Any time','am:Morning (before 12:00)','pm:Afternoon (12:00 to 17:00)','ev:Evening (after 17:00)'].map(x=>{const[v,l]=x.split(':');return`<option value="${v}" ${UI.time===v?'selected':''}>${l}</option>`}).join('')}</select></label>
+<label>Bus company<select id="sf-o"><option value="all">All companies</option>${OPS.map(o=>`<option ${UI.op===o.id?'selected':''}>${o.id}</option>`).join('')}</select></label>
+<button class="btn t" type="submit">Search buses</button></div><p class="mut" id="sf-msg" style="margin:10px 0 0;font-size:13px">1 passenger per booking in this prototype. Route: Sta. Cruz, Cubao, Buendia, Alabang (sample corridor).</p></form>
+<section class="sec" aria-live="polite"><h2>Available trips</h2><div id="results" class="list"></div></section>
+<section class="sec"><h2>How the transit card works</h2><div class="grid">
+<div class="card"><h3>1. Link or register</h3><p class="mut">Add your card to your account. Demo cards: 4500 1234 0001 and 0002.</p></div>
+<div class="card"><h3>2. Reserve and pay</h3><p class="mut">The fare is shown before you pay and deducted once, even if you tap twice.</p></div>
+<div class="card"><h3>3. Validate and ride</h3><p class="mut">Staff validate your ticket at boarding. A reservation alone never means you boarded.</p></div></div></section>
+<section class="sec"><h2>Why reserve ahead</h2><div class="grid">
+<div class="card"><h3>Seat reuse that stays safe</h3><p class="mut">The same seat can serve two riders on different segments, but only after the first rider's exit is confirmed.</p></div>
+<div class="card"><h3>No guessing at the terminal</h3><p class="mut">Remaining seats are counted per segment, so you see what is open for your stops.</p></div>
+<div class="card"><h3>Paperless</h3><p class="mut">Receipts and QR tickets live in My Bookings.</p></div></div></section></div>`;
+ res()}
+function res(){const box=$('#results');if(!box)return;sweep();
+ let tr=tripsFor(UI.date).filter(x=>UI.op==='all'||x.op.id===UI.op).filter(x=>{const h=+stopTime(x,UI.f).slice(0,2);return UI.time==='any'||(UI.time==='am'&&h<12)||(UI.time==='pm'&&h>=12&&h<17)||(UI.time==='ev'&&h>=17)}).sort((a,b)=>stopTime(a,UI.f)<stopTime(b,UI.f)?-1:1);
+ if(!tr.length){box.innerHTML=`<div class="empty"><b>No matching trips.</b><br>Try another time of day or choose All companies.</div>`;return}
+ box.innerHTML=tr.map(x=>{const gone=departed(x,UI.f),a=gone?0:avail(x,UI.f,UI.t),fr=fare(x.op,UI.f,UI.t,'Regular');const bs=gone?['Departed','r']:a===0?['Full','r']:a<=6?['Almost full','o']:['Open','g'];
+ return`<article class="card res"><div><div class="meta"><b style="color:var(--ink)">${esc(x.op.id)}</b><span>Bus ${x.bus}</span><span class="badge ${bs[1]}">${bs[0]}</span></div>
+ <div class="big">${stopTime(x,UI.f)} ${STOPS[UI.f].n} → ${stopTime(x,UI.t)} ${STOPS[UI.t].n}</div>
+ <div class="meta"><span>${x.date}</span><span>${x.op.type}</span><span>Sample fare from ${peso(fr.total)}</span><span>${gone?'Already left your boarding stop':a+' of '+SEATS+' seats free for this segment'}</span></div><div class="meter" aria-hidden="true"><i style="width:${a/SEATS*100}%"></i></div></div>
+ <button class="btn" data-act="open" data-id="${esc(x.id)}" ${a?'':'disabled'}>Select seat</button></article>`}).join('')}
+/* ========= SEAT DIALOG & CHECKOUT ========= */
+function openDlg(h){const sc=dlg.open?($('.db',dlg)||{}).scrollTop:0;dlg.innerHTML=h;if(!dlg.open)dlg.showModal();const d=$('.db',dlg);if(d&&sc)d.scrollTop=sc}
+function seatMap(tr){const{f,t}=UI;const btn=(n,pos)=>{const st=seatState(tr,n,f,t);return`<button class="seat ${st}" data-act="seat" data-s="${n}" aria-label="Seat ${n}, ${pos}, ${LBL[st]}" ${['occupied','blocked','held'].includes(st)?'disabled':''} ${st==='mine'?'aria-pressed="true"':''}>${n}</button>`};
+ let h=`<div class="bus"><div class="front"><span>🚪 Front entrance</span><span>Driver 🧑‍✈️</span></div><div class="srow" style="justify-content:flex-start">${btn(1,'window')}</div>`,n=2;
+ for(let r=0;r<11;r++){h+='<div class="srow">';for(let c=0;c<4;c++){if(c===2)h+='<i class="aisle"></i>';h+=btn(n++,c%3===0?'window':'aisle')}h+='</div>'}
+ h+='<div class="srow" style="border-top:2px dashed var(--line);padding-top:8px">';for(let c=0;c<5;c++)h+=btn(n++,c%4===0?'window':'middle');h+='</div></div>';
+ return h+`<div class="leg"><span><i style="background:var(--tealbg);border:1px solid var(--teal)"></i>Available</span><span><i style="background:var(--blue)"></i>Selected</span><span><i style="background:var(--redbg);border:1px solid var(--red)"></i>Occupied</span><span><i style="background:#fff6d1;border:1px solid var(--yel)"></i>Held / awaiting exit</span></div>`}
+function rSeat(){const tr=tripById(UI.trip),fr=fare(tr.op,UI.f,UI.t,UI.cat),c=S.cards[UI.card],h=S.holds[hk(tr,UI.seat)];UI.mode='seat';
+ openDlg(`<div class="dh"><h3 style="margin:0">${esc(tr.op.id)} · Bus ${tr.bus} · ${STOPS[UI.f].n} → ${STOPS[UI.t].n}</h3><button class="btn g sm" data-act="close">Close</button></div>
+ <div class="db"><div class="split"><div>${seatMap(tr)}<p class="mut" style="font-size:12.5px;text-align:center;margin-top:10px">Tap a yellow seat to be notified when its previous passenger exits.</p></div>
+ <div><h3>Your booking</h3><dl><dt>Passenger</dt><dd>${esc(who())}</dd><dt>Segment</dt><dd>${STOPS[UI.f].n} → ${STOPS[UI.t].n} (${fr.km} km)</dd><dt>Seat</dt><dd>${UI.seat||'Not selected'}</dd></dl>
+ <label>Passenger type<select data-chg="cat">${Object.keys(CATS).map(k=>`<option ${UI.cat===k?'selected':''}>${k}</option>`).join('')}</select></label>
+ <dl><dt>Base fare (sample)</dt><dd>${peso(fr.base)}</dd><dt>Discount</dt><dd>−${peso(fr.disc)}</dd><dt>Total</dt><dd style="font-size:1.2rem">${peso(fr.total)}</dd></dl>
+ ${UI.cat!=='Regular'?'<p class="mut" style="font-size:12.5px">A valid ID for this passenger type must be shown when boarding.</p>':''}
+ ${UI.seat&&h?`<p class="note">Seat held for you: <span id="hold">${Math.max(0,Math.round((h.exp-Date.now())/1000))}</span>s left</p>`:''}
+ <h3 style="margin-top:14px">Transit card (simulated scan)</h3><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn g sm" data-act="scan">Scan / tap my card</button></div>
+ <div style="display:flex;gap:8px;margin-top:8px"><input id="cn" placeholder="Or type card number" aria-label="Card number" inputmode="numeric"><button class="btn g sm" data-act="usecard">Use</button></div>
+ ${c?`<p style="margin-top:8px"><b>${mask(UI.card)}</b> · ${esc(PAX[c.owner].name)} · Balance ${peso(c.bal)} · <span class="badge ${c.status==='Active'?'g':'r'}">${c.status}</span></p>`:'<p class="mut" style="margin-top:8px">No card scanned yet. On Android Chrome this reads a real NFC card; elsewhere it uses your linked card.</p>'}
+ <button class="btn t" style="width:100%;margin-top:12px" data-act="pay" ${UI.busy?'disabled':''}>${UI.busy?'Processing…':'Confirm payment · '+peso(fr.total)}</button></div></div></div>`)}
+function pay(){if(UI.busy)return;const tr=tripById(UI.trip),{f,t,seat,cat}=UI,c=S.cards[UI.card],px=S.pax,pname=who();
+ if(!seat)return toast('Select a seat first.');if(!c)return toast('Scan or enter a registered card.');
+ if(c.status!=='Active')return toast('This card is blocked. Use another card.');
+ if(c.owner!==px)return toast('That card is linked to another passenger.');if(departed(tr,f))return toast('This bus has already left your boarding stop.');
+ const fr=fare(tr.op,f,t,cat);if(c.bal<fr.total)return toast('Balance is too low. Top up in Transit Card.');
+ const idem=[tr.id,seat,S.pax,f,t].join('|'),dup=S.txs.find(x=>x.idem===idem&&['Successful','Pending'].includes(x.status));
+ if(dup)return toast('This booking is already paid. See My Bookings.');
+ if(seatState(tr,seat,f,t)!=='mine')return toast('Your seat hold expired. Pick a seat again.'),rSeat();
+ UI.busy=true;const tx={ref:'TX-'+(100000+nid()),idem,card:UI.card,amt:fr.total,status:'Pending',type:'fare',ts:stamp(),desc:`${tr.op.id} ${STOPS[f].n} → ${STOPS[t].n}`};S.txs.unshift(tx);save();rSeat();
+ setTimeout(()=>{UI.busy=false;// re-validate right before commit (a backend must do this atomically)
+  if(seatState(tr,seat,f,t)!=='mine'){tx.status='Failed';save();toast('Seat no longer available. You were not charged.');return dlg.open&&UI.mode==='seat'?rSeat():undefined}
+  c.bal=Math.round((c.bal-fr.total)*100)/100;tx.status='Successful';
+  const id='BK'+nid(),b={id,tripId:tr.id,seat,from:f,to:t,pax:px,name:pname,cat,status:'Confirmed',pay:'Paid',base:fr.base,disc:fr.disc,fare:fr.total,txRef:tx.ref,rc:'RC-'+(200000+nid()),card:UI.card,ts:stamp()};
+  tx.bk=id;S.bookings.push(b);delete S.holds[hk(tr,seat)];
+  note(px,`Booking ${id} confirmed. Seat ${seat}, ${STOPS[f].n} → ${STOPS[t].n}.`);note(px,`Payment ${peso(fr.total)} received (${tx.ref}).`);
+  if(c.bal<50)note(px,'Low card balance. Please top up.');S.log.unshift({ts:stamp(),who:pname,action:'Booking paid',rec:id});UI.seat=null;save();dlg.close();render();showReceipt(id)},700)}
+/* ========= TICKETS & RECEIPTS ========= */
+function qrFallback(txt){let r=hash(txt),c='';const n=21,F=(x,y)=>`<path d="M${x} ${y}h7v7h-7z" fill="#000"/><path d="M${x+1} ${y+1}h5v5h-5z" fill="#fff"/><path d="M${x+2} ${y+2}h3v3h-3z" fill="#000"/>`;
+ for(let y=0;y<n;y++)for(let x=0;x<n;x++){if((x<8&&y<8)||(x>12&&y<8)||(x<8&&y>12))continue;r=(r*1103515245+12345)>>>0;if((r>>>16)&1)c+=`<rect x="${x}" y="${y}" width="1" height="1"/>`}
+ return`<svg viewBox="0 0 21 21" width="150" height="150" role="img" aria-label="Demo ticket pattern" style="background:#fff;padding:6px;border-radius:8px">${F(0,0)}${F(14,0)}${F(0,14)}<g fill="#000">${c}</g></svg>`}
+/* Ticket code = reference + checksum. Real QR (qrcodejs). Verified by staff scan below. A production system must sign and verify on a server. */
+const tcode=b=>`LSB|${b.id}|${b.txRef}|${hash(b.id+b.txRef)}`;
+function drawQR(code){try{new QRCode($('#qrbox'),{text:code,width:150,height:150,correctLevel:QRCode.CorrectLevel.M})}catch(e){$('#qrbox').innerHTML=qrFallback(code)}}
+async function camScan(onCode){if(!('BarcodeDetector' in window))return toast('Camera QR scanning needs Chrome or Edge. Paste the ticket code instead.');
+ try{const st=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}}),v=document.createElement('video');v.srcObject=st;v.playsInline=true;v.muted=true;v.style.cssText='width:100%;max-width:360px;border-radius:12px;margin-top:10px';$('#cam').replaceChildren(v);await v.play();
+  const det=new BarcodeDetector({formats:['qr_code']}),stop=()=>st.getTracks().forEach(t=>t.stop());
+  const loop=async()=>{if(!v.isConnected)return stop();try{const r=await det.detect(v);if(r[0]){stop();$('#cam').replaceChildren();return onCode(r[0].rawValue)}}catch(e){}requestAnimationFrame(loop)};loop()}
+ catch(e){toast('Camera blocked. Allow camera access or paste the code.')}}
+function validateTicket(code){const p=String(code).trim().split('|'),b=S.bookings.find(x=>x.id===p[1]);
+ if(p[0]!=='LSB'||!b||p[3]!==String(hash(p[1]+p[2])))return toast('Invalid ticket code.');
+ if(UI.opTrip&&b.tripId!==UI.opTrip)return toast('This ticket is for a different trip. Select that trip first.');
+ if(b.status==='Cancelled')return toast('This ticket was cancelled.');
+ if(b.status!=='Confirmed')return toast(`Ticket already used (${b.status}).`);
+ setStatus(b,'Checked In');render();toast(`Valid. ${b.name}, seat ${b.seat}, checked in.`)}
+/* Tap-to-board: a paid booking is checked in AND boarded automatically when its card is tapped. No staff step needed. */
+function tapBoard(card){const c=S.cards[card];if(!c)return toast('Card not recognised.');if(c.status!=='Active')return toast('Card is blocked. Ask staff for help.');
+ const b=S.bookings.filter(x=>x.card===card&&x.status==='Confirmed'&&(S.pax!=='OP'||!UI.opTrip||x.tripId===UI.opTrip)).sort((a,b)=>a.tripId<b.tripId?-1:1)[0];
+ if(!b)return toast('No paid booking is waiting for this card.');
+ setStatus(b,'Checked In');setStatus(b,'Boarded');note(b.pax,`Boarded automatically. Seat ${b.seat}. Have a safe trip.`);
+ S.log.unshift({ts:stamp(),who:'Card reader',action:'Auto boarding by card tap',rec:`${b.id} seat ${b.seat}`});render();toast(`${b.name} boarded. Seat ${b.seat}.`)}
+function registerCard(v){v=norm(v);if(v.length<8)return toast('Enter at least 8 digits of the card number.');
+ if(S.cards[v]&&S.cards[v].owner!==S.pax)return toast('That card is linked to another passenger.');
+ if(!S.cards[v])S.cards[v]={owner:S.pax,bal:0,status:'Active'};PAX[S.pax].card=v;S.link[S.pax]=v;logIt('Card linked',mask(v));render();toast('Card linked. Top up to use it.')}
+function nfcRead(sn){sn=norm(sn);if(!S.cards[sn]){if(!confirm('New card '+mask(sn)+'. Link it to your account?'))return;registerCard(sn)}
+ if(S.cards[sn].owner!==S.pax)return toast('That card belongs to another passenger.');UI.card=sn;rSeat()}
+function showReceipt(id){const b=S.bookings.find(x=>x.id===id),tr=tripById(b.tripId);UI.mode='rc';
+ openDlg(`<div class="dh"><h3 style="margin:0">Digital receipt & ticket</h3><button class="btn g sm" data-act="close">Close</button></div><div class="db"><div class="split"><div style="text-align:center"><div id="qrbox" style="display:inline-block;background:#fff;padding:8px;border-radius:8px"></div><p class="mut" style="font-size:12px">Show this QR to staff when boarding.<br><code style="word-break:break-all">${tcode(b)}</code></p><span class="badge g">${b.status}</span></div>
+ <div><dl><dt>Receipt no.</dt><dd>${b.rc}</dd><dt>Transaction</dt><dd>${b.txRef}</dd><dt>Booking ref</dt><dd>${b.id}</dd><dt>Passenger</dt><dd>${esc(b.name)}</dd><dt>Card</dt><dd>${mask(b.card)}</dd><dt>Operator / bus</dt><dd>${esc(tr.op.id)} · ${tr.bus}</dd><dt>Trip</dt><dd>${tr.date} · departs ${tr.time}</dd><dt>Boarding → destination</dt><dd>${STOPS[b.from].n} → ${STOPS[b.to].n}</dd><dt>Seat</dt><dd>${b.seat}</dd><dt>Base fare</dt><dd>${peso(b.base)}</dd><dt>Discount (${b.cat})</dt><dd>−${peso(b.disc)}</dd><dt>Amount paid</dt><dd>${peso(b.fare)}</dd><dt>Payment</dt><dd>Transit card · ${S.txs.find(x=>x.ref===b.txRef).status}</dd></dl>
+ <div class="noprint" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" onclick="window.print()">Print / save as PDF</button><button class="btn g sm" data-act="email">Email receipt</button></div></div></div></div>`);drawQR(tcode(b))}
+/* ========= MY BOOKINGS ========= */
+const STAGES=['Booked','Checked In','Boarded','Approaching','Alighted','Completed'];
+function stageIdx(s){return{'Confirmed':0,'Checked In':1,'Boarded':2,'Approaching Destination':3,'Alighting Pending':3,'Alighted':5}[s]}
+function rTrips(){const mine=S.bookings.filter(b=>b.pax===S.pax).reverse(),ns=S.notes.filter(n=>n.pax===S.pax),w=S.watch.filter(x=>x.pax===S.pax);
+ app.innerHTML=`<div class="wrap sec"><h2>My bookings</h2><div class="list">${mine.length?mine.map(b=>{const tr=tripById(b.tripId),i=stageIdx(b.status);return`<article class="card"><div class="meta"><b style="color:var(--ink)">${esc(tr.op.id)} · ${tr.bus}</b><span>${tr.date} ${tr.time}</span><span>Seat ${b.seat}</span><span>${peso(b.fare)}</span><span class="badge ${b.status==='Cancelled'?'r':'b'}">${b.status}</span></div>
+ <h3 style="margin:8px 0 0">${STOPS[b.from].n} → ${STOPS[b.to].n}</h3>
+ ${b.status!=='Cancelled'?`<div class="steps">${STAGES.map((s,k)=>`<span class="${k<=i?'on':''}">${s}</span>`).join('')}</div>`:''}
+ <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" data-act="rcpt" data-id="${b.id}">Ticket & receipt</button>
+ ${b.status==='Confirmed'?`<button class="btn t sm" data-act="tapme" data-id="${b.id}">Tap card to board</button> <button class="btn g sm" data-act="cancel" data-id="${b.id}">Cancel & refund</button>`:''}
+ ${['Approaching Destination','Alighting Pending'].includes(b.status)?`<button class="btn t sm" data-act="selfexit" data-id="${b.id}">I have got off</button>`:''}</div></article>`}).join(''):`<div class="empty"><b>No bookings yet.</b><br>Find a bus and reserve a seat to see it here.</div>`}</div>
+ ${w.length?`<h3 style="margin-top:24px">Waiting for a seat</h3>${w.map(x=>`<p class="mut">Seat ${x.seat} on ${esc(x.tripId.split('|')[1])} ${x.tripId.split('|')[2]}, from ${STOPS[x.from].n}. We will notify you once the previous passenger's exit is confirmed.</p>`).join('')}`:''}
+ <h3 style="margin-top:24px">Notifications</h3><div class="list">${ns.length?ns.slice(0,12).map(n=>`<div class="card" style="padding:10px 14px"><b>${esc(n.text)}</b><div class="mut" style="font-size:12px">${n.ts} · in-app (email/SMS/push need extra infrastructure)</div></div>`).join(''):'<div class="empty">Nothing yet.</div>'}</div></div>`;
+ S.notes.forEach(n=>{if(n.pax===S.pax)n.read=true});save();renderNav()}
+/* ========= TRANSIT CARD ========= */
+function rCard(){const num=PAX[S.pax].card,c=S.cards[num],tx=S.txs.filter(x=>x.card===num);
+ app.innerHTML=`<div class="wrap sec"><h2>Transit card</h2><div class="grid"><div class="cardviz"><div>${BRAND} · demo card</div><div><div class="bal">${peso(c.bal)}</div><div>${mask(num)} · ${esc(PAX[S.pax].name)} · ${c.status}</div></div></div>
+ <div class="card"><h3>Top up (simulated)</h3><p class="mut">No real money moves. A live version needs a payment provider.</p><div style="display:flex;gap:8px;flex-wrap:wrap">${[100,200,500].map(a=>`<button class="btn sm" data-act="topup" data-a="${a}">+${peso(a)}</button>`).join('')}</div>
+ <h3 style="margin-top:16px">Link a card</h3><div style="display:flex;gap:8px"><input id="lc" placeholder="Card number" aria-label="Card number" inputmode="numeric"><button class="btn g sm" data-act="link">Link</button></div>
+ <h3 style="margin-top:16px">Card safety</h3><button class="btn r sm" data-act="block" ${c.status!=='Active'?'disabled':''}>Report lost / block card</button>${c.status!=='Active'?'<p class="mut" style="margin-top:8px">Blocked. Staff must reissue in a real system.</p>':''}</div></div>
+ <h3 style="margin-top:26px">Transactions</h3><div class="card tw"><table><thead><tr><th>Date</th><th>Reference</th><th>Details</th><th>Status</th><th>Amount</th></tr></thead><tbody>${tx.length?tx.map(x=>`<tr><td>${x.ts}</td><td>${x.ref}</td><td>${esc(x.desc)}</td><td><span class="badge ${x.status==='Successful'?'g':x.status==='Failed'?'r':'o'}">${x.status}</span></td><td>${x.type==='fare'?'−':'+'}${peso(x.amt)}</td></tr>`).join(''):'<tr><td colspan="5" class="mut">No transactions yet.</td></tr>'}</tbody></table></div></div>`}
+/* ========= ROUTES & STATIONS ========= */
+function rRoutes(){const q=UI.q.toLowerCase(),st=STOPS.filter(s=>(s.n+s.m).toLowerCase().includes(q));
+ app.innerHTML=`<div class="wrap sec"><h2>Bus companies</h2><div class="grid">${OPS.map(o=>`<article class="card"><span class="badge o">Sample data</span><h3 style="margin-top:8px">${esc(o.id)}</h3><p class="mut" style="margin-bottom:6px">Route: Sta. Cruz → Cubao → Buendia → Alabang<br>${o.type} · about ${Math.round(STOPS[3].km*MPK)} min · ${SEATS} seats<br>Departures: ${o.times.join(', ')}</p><p class="note">${o.ann}</p>
+ <div style="display:flex;gap:8px;margin-top:12px"><button class="btn g sm" data-act="company" data-o="${esc(o.id)}">View buses</button><button class="btn sm" data-act="company" data-o="${esc(o.id)}">Book now</button></div></article>`).join('')}</div>
+ <h2 style="margin-top:34px">Route map (schematic)</h2><div class="card" style="padding:34px 30px 52px"><div class="line" style="margin:0;max-width:none">${STOPS.map((s,i)=>`<i class="stop" style="border-color:var(--card);box-shadow:0 0 0 2px var(--navy)"><span style="color:var(--ink)">${s.n}<br><small class="mut">${s.km} km</small></span></i>${i<3?'<div class="seg sC"></div>':''}`).join('')}</div></div>
+ <h2 style="margin-top:34px">Station directory</h2><label style="max-width:360px">Search stations<input id="q" value="${esc(UI.q)}" placeholder="Name or city" data-inp="q"></label>
+ <div class="grid" style="margin-top:14px">${st.length?st.map(s=>`<div class="card"><h3>${s.n} terminal</h3><p class="mut">${s.m}<br>Address, hours and landmarks: not verified (placeholder).<br>Routes: all four companies (sample).</p></div>`).join(''):'<div class="empty">No station matches. Try a different name.</div>'}</div></div>`}
+/* ========= BUS TRACKING (Leaflet + OpenStreetMap). Live = staff phone GPS (same browser until a backend exists); otherwise demo playback ========= */
+let PLAY,GPSW,MAP,MARK;
+function dropMap(){try{if(MAP)MAP.remove()}catch(e){}MAP=MARK=null}
+function posAt(p){const T=STOPS[STOPS.length-1].km,d=p*T;let i=0;while(i<STOPS.length-2&&d>=STOPS[i+1].km)i++;const a=STOPS[i],b=STOPS[i+1],t=Math.min(1,(d-a.km)/(b.km-a.km));return{lat:a.lat+(b.lat-a.lat)*t,lng:a.lng+(b.lng-a.lng)*t,i,next:i+1,d}}
+function moveBus(){const el=$('#trkinfo');if(!el)return;const g=(S.gps||{})[UI.trk],live=g&&Date.now()-g.ts<120000;let ll;
+ if(live){ll=[g.lat,g.lng];el.textContent='Live GPS from staff device · updated '+Math.round((Date.now()-g.ts)/1000)+'s ago'}
+ else{const q=posAt(UI.prog),tr=tripById(UI.trk);ll=[q.lat,q.lng];el.textContent=`Demo playback · ${Math.round(q.d)} km from ${STOPS[0].n} · next stop ${STOPS[q.next].n}, scheduled ${stopTime(tr,q.next)}`}
+ if(MARK)MARK.setLatLng(ll)}
+function rTrack(){const trs=tripsFor(today());if(!trs.find(x=>x.id===UI.trk))UI.trk=(S.bookings.find(b=>trs.find(x=>x.id===b.tripId))||{}).tripId||trs[0].id;
+ app.innerHTML=`<div class="wrap sec"><h2>Track the bus</h2><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:12px"><label>Trip today<select data-chg="trk">${trs.map(x=>`<option value="${esc(x.id)}" ${x.id===UI.trk?'selected':''}>${x.op.id} ${x.bus} · departs ${x.time}</option>`).join('')}</select></label><label>Demo playback position<input type="range" id="prog" min="0" max="1000" value="${UI.prog*1000}"></label></div>
+ <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px"><button class="btn sm" id="playb" data-act="play">${PLAY?'Pause':'Play demo'}</button><span id="trkinfo" class="badge b" style="white-space:normal"></span></div>
+ <div id="map" role="region" aria-label="Bus route map"></div><p class="mut" style="font-size:13px;margin-top:10px">Live position appears when staff share GPS on the Operator page (same browser only until a backend is added). Otherwise the bus moves in demo playback. The dashed line is schematic, not the road.</p></div>`;
+ dropMap();if(typeof L==='undefined'){$('#map').innerHTML='<div class="empty">Map library did not load. Check your connection. The status above still updates.</div>'}
+ else{MAP=L.map('map');L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap contributors'}).addTo(MAP);const pts=STOPS.map(x=>[x.lat,x.lng]);L.polyline(pts,{color:'#2563eb',weight:4,dashArray:'6 8'}).addTo(MAP);
+  STOPS.forEach(x=>L.circleMarker([x.lat,x.lng],{radius:7,color:'#0b1f4a',fillColor:'#fff',fillOpacity:1,weight:3}).addTo(MAP).bindTooltip(x.n,{permanent:true,direction:'right'}));
+  MARK=L.marker(pts[0],{icon:L.divIcon({html:'🚌',className:'busico',iconSize:[30,30]})}).addTo(MAP);MAP.fitBounds(pts,{padding:[30,30]})}
+ moveBus()}
+/* ========= OPERATOR DASHBOARD ========= */
+function setStatus(b,s){b.status=s;const tr=tripById(b.tripId);logIt(`Status → ${s}`,`${b.id} seat ${b.seat}`);
+ if(s==='Approaching Destination')note(b.pax,`Approaching ${STOPS[b.to].n}. Get ready to alight.`);
+ if(s==='Alighting Pending')note(b.pax,`Please confirm you got off at ${STOPS[b.to].n}.`);
+ if(s==='Alighted'){note(b.pax,`Trip completed. Thank you for riding ${tr.op.id}.`);S.log.unshift({ts:stamp(),who:who(),action:'Seat handover recorded',rec:`Seat ${b.seat} released at ${STOPS[b.to].n} (${tr.bus})`});
+  S.watch=S.watch.filter(w=>{if(w.tripId===b.tripId&&w.seat===b.seat&&w.from>=b.to){note(w.pax,`Seat ${w.seat} is ready for you on ${tr.op.id} from ${STOPS[w.from].n}. Book it now.`);return false}return true})}}
+function rOps(){const ids=[...new Set(S.bookings.map(b=>b.tripId))];if(!ids.includes(UI.opTrip))UI.opTrip=ids[0]||null;const tr=UI.opTrip&&tripById(UI.opTrip),bk=tr?S.bookings.filter(b=>b.tripId===tr.id&&b.status!=='Cancelled'):[];
+ const nx=bk.filter(b=>['Boarded','Approaching Destination','Alighting Pending'].includes(b.status)).sort((a,b)=>a.to-b.to)[0];
+ app.innerHTML=`<div class="wrap sec"><h2>Operator dashboard</h2><p class="mut">For staff use while the bus is stopped. Role: Station / boarding staff (demo).</p>
+ <div class="card" style="margin-bottom:14px"><h3>Boarding reader: tap to board</h3><p class="mut">A paid passenger is checked in and marked Boarded automatically when their card is tapped. No staff confirmation needed.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn t sm" data-act="tapnfc">Read NFC card</button><select id="tapc" aria-label="Demo card" style="width:auto">${Object.keys(S.cards).map(c=>`<option value="${c}">${mask(c)} ${esc(PAX[S.cards[c].owner].name)}</option>`).join('')}</select><button class="btn g sm" data-act="tapdemo">Simulate tap</button></div></div>
+ <div class="card" style="margin-bottom:14px"><h3>Fallback: validate a QR ticket</h3><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn t sm" data-act="vscan">Scan QR with camera</button><input id="tc" placeholder="Or paste ticket code (LSB|BK…)" aria-label="Ticket code" style="flex:1;min-width:200px"><button class="btn g sm" data-act="vcode">Validate</button></div><div id="cam"></div></div>
+ ${tr?`<label style="max-width:420px">Trip<select data-chg="opTrip">${ids.map(i=>{const x=tripById(i);return`<option value="${esc(i)}" ${i===tr.id?'selected':''}>${x.op.id} ${x.bus} · ${x.date} ${x.time}</option>`}).join('')}</select></label>
+ <div class="meta" style="margin:12px 0"><span>Booked seats: ${bk.length}</span><span>Next stop: <b>${nx?STOPS[nx.to].n:'none pending'}</b></span><button class="btn g sm" data-act="delay">Report 10 min delay</button><button class="btn g sm" data-act="gps">Share / stop sharing this device's GPS</button></div>
+ <div class="card tw"><table><thead><tr><th>Seat</th><th>Passenger</th><th>Segment</th><th>Status</th><th>Action</th></tr></thead><tbody>${bk.map(b=>`<tr><td>${b.seat}</td><td>${esc(b.name)}</td><td>${STOPS[b.from].n} → ${STOPS[b.to].n}</td><td><span class="badge b">${b.status}</span></td><td>${b.status!=='Alighted'?`<button class="btn sm" data-act="adv" data-id="${b.id}">${OPLBL[b.status]}</button> <button class="btn g sm" data-act="exit" data-id="${b.id}">Assisted exit</button>`:'<span class="badge g">Seat released</span>'}</td></tr>`).join('')}</tbody></table></div>`
+ :`<div class="empty"><b>No booked trips yet.</b><br>Switch to Passenger A, book Seat 12 (Sta. Cruz → Cubao), then return here.</div>`}
+ <h3 style="margin-top:26px">Trip log & audit trail</h3><div class="card tw"><table><thead><tr><th>Time</th><th>By</th><th>Action</th><th>Record</th></tr></thead><tbody>${S.log.slice(0,12).map(l=>`<tr><td>${l.ts}</td><td>${esc(l.who)}</td><td>${esc(l.action)}</td><td>${esc(l.rec)}</td></tr>`).join('')||'<tr><td colspan="4" class="mut">No events yet.</td></tr>'}</tbody></table></div></div>`}
+/* ========= ACTIONS ========= */
+const ACT={
+ nav:d=>{S.view=d.v;render();scrollTo(0,0)},
+ open:d=>{UI.trip=d.id;UI.seat=null;rSeat()},
+ seat:d=>{if(S.pax==='OP')return toast('Switch to a passenger account to reserve a seat.');const tr=tripById(UI.trip),s=+d.s,st=seatState(tr,s,UI.f,UI.t);
+  if(st==='pending'){if(!S.watch.find(w=>w.pax===S.pax&&w.tripId===tr.id&&w.seat===s))S.watch.push({pax:S.pax,tripId:tr.id,seat:s,from:UI.f});save();toast(`Seat ${s} is awaiting exit confirmation. We will notify you when it is ready.`);return}
+  for(const k in S.holds)if(S.holds[k].pax===S.pax)delete S.holds[k];
+  if(UI.seat===s){UI.seat=null}else{S.holds[hk(tr,s)]={pax:S.pax,exp:Date.now()+HOLD_SEC*1000};UI.seat=s}save();rSeat();dlg.querySelector(`[data-s="${s}"]`)?.focus({preventScroll:true})},
+ scan:async()=>{if(S.pax==='OP')return toast('Switch to a passenger to scan a card.');
+  if('NDEFReader' in window){try{const r=new NDEFReader();await r.scan();toast('Tap your NFC card on the back of your phone.');r.onreading=e=>nfcRead(e.serialNumber);return}catch(e){toast('NFC not available here. Using your linked card.')}}
+  UI.card=PAX[S.pax].card;rSeat()},
+ vscan:()=>camScan(validateTicket),vcode:()=>validateTicket($('#tc').value),
+ link:()=>registerCard($('#lc').value),
+ usecard:()=>{const v=norm($('#cn').value);if(!S.cards[v]){return toast('Card not found. Demo cards: 4500 1234 0001 / 0002.')}if(S.cards[v].owner!==S.pax)return toast('That card is linked to another passenger.');UI.card=v;rSeat()},
+ pay,close:()=>dlg.close(),email:()=>toast('Email receipts need an email service. Placeholder only.'),
+ rcpt:d=>showReceipt(d.id),
+ cancel:d=>{const b=S.bookings.find(x=>x.id===d.id);if(b.status!=='Confirmed')return toast('Only unboarded bookings can be cancelled.');b.status='Cancelled';const c=S.cards[b.card];c.bal=Math.round((c.bal+b.fare)*100)/100;
+  const o=S.txs.find(x=>x.ref===b.txRef);o.status='Refunded';S.txs.unshift({ref:'TX-'+(100000+nid()),card:b.card,amt:b.fare,status:'Refunded',type:'refund',ts:stamp(),desc:'Refund '+b.id});note(b.pax,`Booking ${b.id} cancelled. ${peso(b.fare)} refunded.`);logIt('Cancelled and refunded',b.id);render();toast('Booking cancelled and fare refunded.')},
+ selfexit:d=>{setStatus(S.bookings.find(x=>x.id===d.id),'Alighted');render();toast('Exit confirmed. Seat released.')},
+ adv:d=>{const b=S.bookings.find(x=>x.id===d.id);setStatus(b,ADV[ADV.indexOf(b.status)+1]);render()},
+ exit:d=>{setStatus(S.bookings.find(x=>x.id===d.id),'Alighted');render();toast('Exit confirmed by staff. Seat handed over.')},
+ tapme:d=>tapBoard(S.bookings.find(x=>x.id===d.id).card),tapdemo:()=>tapBoard($('#tapc').value),
+ tapnfc:async()=>{if(!('NDEFReader' in window))return toast('NFC needs Chrome on Android. Use Simulate tap.');try{const r=new NDEFReader();await r.scan();toast('Tap the passenger card on this phone.');r.onreading=e=>tapBoard(norm(e.serialNumber))}catch(e){toast('NFC permission denied.')}},
+ play:()=>{if(PLAY){clearInterval(PLAY);PLAY=null;$('#playb').textContent='Play demo';return}$('#playb').textContent='Pause';
+  PLAY=setInterval(()=>{if(!$('#map')){clearInterval(PLAY);PLAY=null;return}UI.prog=Math.min(1,UI.prog+.004);$('#prog').value=UI.prog*1000;moveBus();if(UI.prog>=1){clearInterval(PLAY);PLAY=null;$('#playb').textContent='Play demo'}},200)},
+ gps:()=>{if(!navigator.geolocation)return toast('GPS is not available on this device.');if(GPSW!=null){navigator.geolocation.clearWatch(GPSW);GPSW=null;return toast('GPS sharing stopped.')}
+  const id=UI.opTrip;if(!id)return toast('Select a trip first.');UI.trk=id;
+  GPSW=navigator.geolocation.watchPosition(q=>{S.gps=S.gps||{};S.gps[id]={lat:q.coords.latitude,lng:q.coords.longitude,ts:Date.now()};save()},err=>{if(err.code===1){navigator.geolocation.clearWatch(GPSW);GPSW=null;toast('Location permission denied.')}},{enableHighAccuracy:true});toast('Sharing GPS for this trip. Open Track Bus to see it.')},
+ delay:()=>{const tr=tripById(UI.opTrip);S.bookings.filter(b=>b.tripId===tr.id&&!['Alighted','Cancelled'].includes(b.status)).forEach(b=>note(b.pax,`${tr.op.id} ${tr.bus} is delayed by about 10 minutes.`));logIt('Delay reported',tr.bus);render();toast('Delay reported to passengers.')},
+ topup:d=>{const n=PAX[S.pax].card;S.cards[n].bal+=+d.a;S.txs.unshift({ref:'TX-'+(100000+nid()),card:n,amt:+d.a,status:'Successful',type:'topup',ts:stamp(),desc:'Top-up (simulated)'});render();toast('Top-up added (simulated).')},
+ block:()=>{if(!confirm('Block this card? You cannot undo this in the demo.'))return;S.cards[PAX[S.pax].card].status='Blocked';logIt('Card blocked',mask(PAX[S.pax].card));render()},
+ company:d=>{UI.op=d.o;S.view='find';render();scrollTo(0,0)},
+ bell:()=>{S.view='trips';render();scrollTo(0,0)},
+ reset:()=>{if(!confirm('Reset all demo data?'))return;S=fresh();PAX.A.card='450012340001';PAX.B.card='450012340002';Object.assign(UI,{seat:null,card:null,trip:null,opTrip:null});if(dlg.open)dlg.close();render();toast('Demo reset.')}};
+document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(b){if(b.tagName==='A')e.preventDefault();ACT[b.dataset.act]?.(b.dataset)}});
+document.addEventListener('change',e=>{const k=e.target.dataset.chg;if(!k)return;if(k==='cat'){UI.cat=e.target.value;rSeat()}if(k==='opTrip'){UI.opTrip=e.target.value;rOps()}if(k==='trk'){UI.trk=e.target.value;rTrack()}});
+document.addEventListener('input',e=>{if(e.target.id==='prog'){UI.prog=e.target.value/1000;moveBus();return}if(e.target.dataset.inp==='q'){UI.q=e.target.value;const p=e.target.selectionStart;rRoutes();const q=$('#q');q.focus();q.setSelectionRange(p,p)}});
+document.addEventListener('submit',e=>{if(e.target.id!=='sf')return;e.preventDefault();const f=+$('#sf-f').value,t=+$('#sf-t').value;
+ if(t<=f)return $('#sf-msg').textContent='Choose a destination that comes after your boarding stop.';
+ if(!$('#sf-d').value||$('#sf-d').value<today())return $('#sf-msg').textContent='Choose today or a later date.';
+ Object.assign(UI,{f,t,date:$('#sf-d').value,time:$('#sf-h').value,op:$('#sf-o').value});res()});
+document.addEventListener('change',e=>{if(e.target.id==='sf-f'){UI.t=+$('#sf-t').value;UI.f=+e.target.value;UI.t=Math.max(UI.t,UI.f+1);const d=$('#sf-d').value;if(d&&d>=today())UI.date=d;UI.time=$('#sf-h').value;UI.op=$('#sf-o').value;rFind()}});
+$('#role').addEventListener('change',e=>{for(const k in S.holds)if(S.holds[k].pax===S.pax)delete S.holds[k];S.pax=e.target.value;UI.card=null;UI.seat=null;if(dlg.open)dlg.close();render()});
+dlg.addEventListener('close',()=>{if(UI.mode==='seat'){for(const k in S.holds)if(S.holds[k].pax===S.pax)delete S.holds[k];UI.seat=null;save();if(S.view==='find')res()}UI.mode=''});
+/* seat-hold countdown: expired holds are released automatically */
+setInterval(()=>{if(!dlg.open||UI.mode!=='seat')return;sweep();const h=$('#hold');if(UI.seat&&!S.holds[hk(tripById(UI.trip),UI.seat)]){UI.seat=null;toast('Seat hold expired and was released.');rSeat()}else if(h){const x=S.holds[hk(tripById(UI.trip),UI.seat)];h.textContent=Math.max(0,Math.round((x.exp-Date.now())/1000))}},1000);
+addEventListener('storage',e=>{if(e.key===KEY&&e.newValue&&$('#trkinfo')){try{S=JSON.parse(e.newValue);moveBus()}catch(x){}}});setInterval(()=>{if($('#trkinfo')&&!PLAY)moveBus()},5000);
+S.view=['find','routes','track','trips','card','ops'].includes(location.hash.slice(1))?location.hash.slice(1):S.view;render();
+addEventListener('hashchange',()=>{const v=location.hash.slice(1);if(Object.hasOwn(VIEWS,v)&&v!==S.view){S.view=v;render();scrollTo(0,0)}});
+</script>
+</body>
+</html>
