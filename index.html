@@ -150,6 +150,24 @@ tbody tr:hover{background:var(--bg)}tbody tr:last-child td{border-bottom:0}
 footer{margin-top:48px;padding:36px 0;background:linear-gradient(180deg,#0b1f4a,#071536)}
 @media(max-width:720px){.hero{padding:44px 0 96px}.panel{padding:18px;border-radius:18px}nav{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}nav::-webkit-scrollbar{display:none}nav button{flex:none;white-space:nowrap}.res{padding:18px 18px 18px 22px}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+/* ---- accounts ---- */
+.acct{display:flex;gap:6px;align-items:center;color:#fff;font-size:13px}.acct b{max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.acct .btn{background:var(--navy2);border:1px solid #33509a;color:#fff;min-height:36px;padding:6px 12px;font-size:13px}.acct .btn.t{background:var(--teal);border-color:var(--teal)}
+#authdlg{width:min(460px,96vw)}#authdlg label{margin-top:12px}#authdlg .db>form>label:first-child{margin-top:0}
+#authdlg .chk{display:flex;gap:10px;align-items:flex-start;text-transform:none;letter-spacing:normal;font-size:13px;font-weight:500;line-height:1.5}
+#authdlg .chk input{width:auto;min-height:0;margin:3px 0 0;flex:none}
+.aerr{color:var(--red);font-size:13px;font-weight:600;min-height:18px;margin:12px 0 8px}
+.lnk{background:none;border:0;padding:0;font:inherit;color:var(--teal);text-decoration:underline;cursor:pointer;text-transform:none;letter-spacing:normal}
+.alinks{font-size:13px;color:var(--mut);margin:14px 0 0}
+@media(max-width:720px){.acct b{display:none}}
+
+.seat.driver{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;background:var(--navy);color:#fff;border-color:var(--navy);cursor:not-allowed;font:700 13px var(--f);box-shadow:none}.seat.driver small{font-size:9px;font-weight:600}.seat.driver:hover{transform:none;box-shadow:none}
+.opmap .seat{cursor:default}.opmap .seat:hover{transform:none;box-shadow:none}
+.segrow{display:grid;grid-template-columns:minmax(120px,1.4fr) 2fr 52px 52px;gap:10px;align-items:center;font-size:13px;padding:7px 0;border-bottom:1px solid var(--line)}.segrow:last-child{border-bottom:0}
+.segbar{height:10px;border-radius:6px;background:var(--bg);overflow:hidden;display:block}.segbar i{display:block;height:100%;background:var(--teal)}.segbar i.full{background:var(--red)}
+.opmap .seat.bk{background:#fff6d1;color:#7a5d00;border-color:var(--yel)}.opmap .seat.ci{background:var(--blue);color:#fff;border-color:var(--blue)}.opmap .seat.done{background:var(--bg);color:var(--mut);border:2px dashed var(--line)}
+textarea{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;resize:vertical}
+.opmap .seat.tr{background:#efe3ff;color:#5b2a9e;border:2px dashed #7c3aed}
 </style>
 </head>
 <body>
@@ -157,7 +175,7 @@ footer{margin-top:48px;padding:36px 0;background:linear-gradient(180deg,#0b1f4a,
 <header class="top"><div class="wrap bar">
 <a class="brand" href="#find" data-act="nav" data-v="find"><span class="logo">LSB</span><b data-brand>Laguna Smart Bus</b></a>
 <nav id="nav" aria-label="Main"></nav>
-<div class="tools"><select id="role" aria-label="Demo user"><option value="A">Passenger A: Ana</option><option value="B">Passenger B: Ben</option><option value="OP">Operator staff</option></select>
+<div class="tools"><span class="acct" id="acct"></span><select id="role" aria-label="Demo user"><option value="A">Passenger A: Ana</option><option value="B">Passenger B: Ben</option><option value="OP">Operator staff</option></select>
 <button class="ic" id="bell" data-act="bell" aria-label="Notifications">🔔<i id="bc"></i></button></div>
 </div></header>
 <main id="app"></main>
@@ -166,7 +184,7 @@ footer{margin-top:48px;padding:36px 0;background:linear-gradient(180deg,#0b1f4a,
 
 <footer><div class="wrap"><b data-brand>Laguna Smart Bus</b> is a demonstration prototype. Stations, schedules, fares and bus numbers are sample data and are not connected to LLI, HM Transport, DLTB Co. or JAC Liner.
 <p style="margin-top:10px">Contact: support@example.com (placeholder) · Policies: placeholder · <button class="btn sm g" style="color:#fff;border-color:#5b73b5" data-act="reset">Reset demo</button></p></div></footer>
-<dialog id="dlg" aria-label="Booking details"></dialog><div id="toast" class="toast" role="status" aria-live="polite"></div>
+<dialog id="dlg" aria-label="Booking details"></dialog><dialog id="authdlg" aria-label="Account"></dialog><div id="toast" class="toast" role="status" aria-live="polite"></div>
 <!-- IMPROVE: Third-party assets. Pin and self-host Leaflet/qrcodejs (or add integrity= and crossorigin= attributes),
      and send a Content-Security-Policy header from the server. Generate QR codes on the server for tickets. -->
 
@@ -204,9 +222,7 @@ const FARE={base:15,perKm:1.85,min:25}, DISC=.2, CATS={Regular:0,Student:DISC,Se
  * password reset, rate limiting, and consent to Terms/Privacy, using an auth provider such as Supabase Auth.
  */
 const PAX={A:{name:'Ana Reyes',card:'450012340001'},B:{name:'Ben Cruz',card:'450012340002'}};
-const ADV=['Confirmed','Checked In','Boarded','Approaching Destination','Alighting Pending','Alighted'];
-const OPLBL={'Confirmed':'Manual check-in','Checked In':'Confirm boarding','Boarded':'Near destination','Approaching Destination':'Request exit check','Alighting Pending':'Confirm exit'};
-const LBL={free:'available',mine:'selected by you',occupied:'occupied',blocked:'unavailable',pending:'awaiting exit confirmation of previous passenger',held:'held by another passenger'};
+const LBL={driver:'driver seat, not available',free:'available',mine:'selected by you',occupied:'occupied',blocked:'unavailable',pending:'awaiting exit confirmation of previous passenger',held:'held by another passenger'};
 /* ========= HELPERS ========= */
 const $=(s,r=document)=>r.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -225,15 +241,25 @@ let tt;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on
  */
 /* ========= STORE (localStorage = prototype only; a real system needs a transactional backend) ========= */
 const KEY='lsb_demo_v2';
-const fresh=()=>({pax:'A',view:'find',bookings:[],txs:[],cards:{'450012340001':{owner:'A',bal:500,status:'Active'},'450012340002':{owner:'B',bal:300,status:'Active'}},notes:[],log:[],holds:{},watch:[],link:{},n:1});
+const fresh=()=>({pax:'A',view:'find',bookings:[],txs:[],cards:{'450012340001':{owner:'A',bal:500,status:'Active'},'450012340002':{owner:'B',bal:300,status:'Active'}},notes:[],incidents:[],reports:[],flags:{},log:[],holds:{},watch:[],link:{},n:1});
 let S;try{S=Object.assign(fresh(),JSON.parse(localStorage.getItem(KEY))||{})}catch(e){S=fresh()}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
-S.link=S.link||{};for(const k in S.link)if(PAX[k]&&S.cards[S.link[k]])PAX[k].card=S.link[k];
+S.reports=S.reports||[];S.link=S.link||{};for(const k in S.link)if(PAX[k]&&S.cards[S.link[k]])PAX[k].card=S.link[k];
 S.txs.forEach(x=>{if(x.status==='Pending')x.status='Failed'}); // page closed mid-payment: nothing was charged
-const who=()=>S.pax==='OP'?'Staff':PAX[S.pax].name;
+/* Booking statuses are only: Booked (passenger reserved) > Checked in (passenger paid) > Completed (operator confirmed passenger got off). Older saved statuses are mapped onto these. */
+const LEGACY={'Confirmed':'Checked in','Checked In':'Checked in','Boarded':'Checked in','Approaching Destination':'Checked in','Alighting Pending':'Checked in','Alighted':'Completed'};
+S.bookings=S.bookings.filter(b=>b.status!=='Cancelled');S.bookings.forEach(b=>{if(LEGACY[b.status])b.status=LEGACY[b.status]});
+const who=()=>S.pax==='OP'?'Staff':(window.AUTH_NAME||PAX[S.pax].name); // real signed-in name when accounts are on
 const note=(p,t)=>S.notes.unshift({pax:p,text:t,ts:stamp(),read:false});
+const opNote=(t,k)=>S.notes.unshift({pax:'OP',kind:k,text:t,ts:stamp(),read:false}); // update for the operator bell
 const logIt=(action,rec)=>S.log.unshift({ts:stamp(),who:who(),action,rec});
 const nid=()=>S.n++;
+/* ===== Seat plans, per bus. SAMPLE layouts only: real plans must come from each operator's vehicle records. Seat 1 is always the driver. ===== */
+const LAYOUTS={L50:{name:'50-seater (2+2)',rows:11,back:5,seats:50},L45:{name:'45-seater (2+2)',rows:10,back:4,seats:45}};
+const layoutOf=tr=>hash(tr.bus)%3===0?LAYOUTS.L45:LAYOUTS.L50;
+const seatsOf=tr=>layoutOf(tr).seats;
+const isOut=tr=>!!(S.flags&&S.flags[tr.id]); // accident or mechanical problem reported: no new bookings
+const OFFER_MIN=15; // how long a passenger has to answer a transfer offer
 /* ========= TRIPS, FARES, SEGMENT AVAILABILITY ========= */
 /* IMPROVE:
  * Trips are generated from fixed time lists and hash-based bus numbers for any date. Real trips must be entered by an authorized admin/operator
@@ -241,16 +267,19 @@ const nid=()=>S.n++;
  */
 function tripsFor(date){return OPS.flatMap(o=>o.times.map(t=>({id:`${date}|${o.id}|${t}`,date,op:o,time:t,bus:`${o.id.slice(0,3).toUpperCase().replace(/\W/g,'')}-${100+hash(o.id+t)%900}`})))}
 const tripById=id=>tripsFor(id.split('|')[0]).find(x=>x.id===id);
+const DRIVER=1; // seat 1 is the driver's seat: never bookable and never counted as a passenger seat (49 passenger seats: 2 to 50)
 /* IMPROVE:
- * 'Blocked' seats are chosen by hash. Replace with real per-vehicle unavailable seats set by the operator.
+ * No seats are marked out of service. Let operators mark individual seats unavailable per vehicle.
  */
-const blocked=(tr,s)=>s===1&&hash(tr.id)%3===0;
+const blocked=()=>false;
 /* IMPROVE:
  * seeds() fabricates occupied seats at random. Remove it: show only real bookings. Random occupancy misleads passengers about availability.
  */
+const DEMO_SEED=false; // true = fill buses with fake sample passengers (old demo behaviour)
 const SEEDC=new Map();
-function seeds(tr){let o=SEEDC.get(tr.id);if(o)return o;o=[];for(let s=1;s<=SEATS;s++){if(s===11||s===12)continue;const h=hash(tr.id+s);if(h%4===0){const f=(h>>>5)%(STOPS.length-1);o.push({seat:s,from:f,to:f+1+(h>>>3)%(STOPS.length-1-f),status:'Boarded',seed:1})}}SEEDC.set(tr.id,o);return o}
-const allB=tr=>[...seeds(tr),...S.bookings.filter(b=>b.tripId===tr.id&&b.status!=='Cancelled')];
+function seeds(tr){if(!DEMO_SEED)return[];let o=SEEDC.get(tr.id);if(o)return o;o=[];for(let s=2;s<=seatsOf(tr);s++){if(s===11||s===12)continue;const h=hash(tr.id+s);if(h%4===0){const f=(h>>>5)%(STOPS.length-1);o.push({seat:s,from:f,to:f+1+(h>>>3)%(STOPS.length-1-f),status:'Boarded',seed:1})}}SEEDC.set(tr.id,o);return o}
+const incoming=tr=>S.bookings.filter(b=>b.xfer&&b.xfer.status==='Offered'&&b.xfer.toTrip===tr.id); // seats reserved on this bus for passengers offered a transfer
+const allB=tr=>[...seeds(tr),...S.bookings.filter(b=>b.tripId===tr.id&&b.status!=='Cancelled'),...incoming(tr).map(b=>({...b,tripId:tr.id,seat:b.xfer.toSeat,status:'Offered'}))];
 const hk=(tr,s)=>tr.id+'#'+s;
 const departed=(tr,f)=>new Date(tr.date+'T'+tr.time+':00').getTime()+Math.round(STOPS[f].km*MPK)*60000<=Date.now(); // bus already passed boarding stop f
 /* IMPROVE:
@@ -262,30 +291,33 @@ function sweep(){const n=Date.now();for(const k in S.holds)if(S.holds[k].exp<=n)
  * Move to the server. Round per the operator's published rules and return a fare breakdown with the booking.
  */
 function fare(op,f,t,cat){const km=STOPS[t].km-STOPS[f].km,b=Math.round(Math.max(FARE.min,(FARE.base+km*FARE.perKm)*op.mult)*4)/4,d=Math.round(b*(CATS[cat]||0)*100)/100;return{km,base:b,disc:d,total:Math.round((b-d)*100)/100}}
-/* A seat is reusable for [f,t) only when no booking overlaps AND every earlier passenger on that seat has CONFIRMED exit (status Alighted).
+/* A seat is reusable for [f,t) only when no booking overlaps AND every earlier passenger on that seat has confirmed exit (status Completed, set by the operator).
    Scheduled arrival time never frees a seat. */
 /* IMPROVE:
  * The overlap logic (from < t && f < to) is sound and worth keeping, but it must run in the database (range-overlap exclusion constraint),
  * not only in JS. Decide the policy for 'awaiting exit confirmation' and make it operator-configurable.
  */
 function seatState(tr,s,f,t){
+ if(s===DRIVER)return'driver';
  if(blocked(tr,s))return'blocked';let st='free';
- for(const b of allB(tr)){if(b.seat!==s)continue;if(b.from<t&&f<b.to)return'occupied';if(b.to<=f&&b.status!=='Alighted')st='pending'}
+ for(const b of allB(tr)){if(b.seat!==s||b.status==='Completed')continue;if(b.from<t&&f<b.to)return'occupied';if(b.to<=f&&b.status!=='Offered')st='pending'}
  sweep();const h=S.holds[hk(tr,s)];
+ if(isOut(tr)&&(st==='free'||st==='pending'))return'blocked';
  if(h&&h.pax!==S.pax)return'held';
  if(st==='free'&&h)return'mine';return st}
-const avail=(tr,f,t)=>{let n=0;for(let s=1;s<=SEATS;s++){const x=seatState(tr,s,f,t);if(x==='free'||x==='mine')n++}return n};
+const avail=(tr,f,t)=>{let n=0;for(let s=2;s<=seatsOf(tr);s++){const x=seatState(tr,s,f,t);if(x==='free'||x==='mine')n++}return n};
 /* ========= UI STATE ========= */
 const UI={f:IX('Sta. Cruz'),t:IX('Quezon City (Cubao)'),date:today(),time:'any',op:'all',cat:'Regular',trip:null,seat:null,card:null,busy:false,mode:'',opTrip:null,q:'',prog:0,trk:null};
 if(tripsFor(today()).every(x=>departed(x,0)))UI.date=ymd(new Date(Date.now()+864e5)); // all of today's buses have left: default to tomorrow
 const app=$('#app'),dlg=$('#dlg');
 const opts=(arr,sel,off=0)=>arr.map((x,i)=>`<option value="${i+off}" ${i+off===sel?'selected':''}>${esc(x.n||x)}</option>`).join('');
 /* ========= NAV / ROUTING ========= */
-const VIEWS={find:'Find a Bus',routes:'Routes & Stations',track:'Track Bus',trips:'My Bookings',card:'Transit Card',ops:'Operator'};
-function renderNav(){const ok=S.pax==='OP'?['find','routes','track','ops']:['find','routes','track','trips','card'];if(!ok.includes(S.view))S.view='find';
- $('#nav').innerHTML=ok.map(v=>`<button data-act="nav" data-v="${v}" ${S.view===v?'aria-current="page"':''}>${VIEWS[v]}</button>`).join('');
- $('#role').value=S.pax;const c=S.notes.filter(n=>n.pax===S.pax&&!n.read).length;$('#bc').textContent=c||'';$('#bell').style.display=S.pax==='OP'?'none':''}
-function render(){dropMap();renderNav();({find:rFind,routes:rRoutes,track:rTrack,trips:rTrips,card:rCard,ops:rOps})[S.view]();document.querySelectorAll('[data-brand]').forEach(e=>e.textContent=BRAND);save()}
+const VIEWS={find:'Find a Bus',routes:'Routes & Stations',track:'Track Bus',incidents:'Accident Reports',report:'Report a Problem',inbox:'Passenger Reports',trips:'My Bookings',card:'Transit Card',ops:'Operator'};
+const navBadge=v=>{const n=v==='incidents'?Object.keys(S.flags).length:v==='inbox'?S.reports.filter(r=>r.status==='Submitted'||r.status==='Under review').length:0;return n?` <i style="font-style:normal;background:var(--red);color:#fff;border-radius:9px;padding:0 7px;font-size:11px">${n}</i>`:''};
+function renderNav(){const ok=S.pax==='OP'?['ops','incidents','inbox','routes','track']:['find','routes','track','trips','report','card'];if(!ok.includes(S.view))S.view=ok[0];
+ $('#nav').innerHTML=ok.map(v=>`<button data-act="nav" data-v="${v}" ${S.view===v?'aria-current="page"':''}>${VIEWS[v]}${navBadge(v)}</button>`).join('');
+ $('#role').value=S.pax;const c=S.notes.filter(n=>n.pax===S.pax&&!n.read).length;$('#bc').textContent=c||'';$('#bell').style.display=''}
+function render(){expireOffers();dropMap();renderNav();({report:rReport,inbox:rInbox,incidents:rInci,find:rFind,routes:rRoutes,track:rTrack,trips:rTrips,card:rCard,ops:rOps})[S.view]();document.querySelectorAll('[data-brand]').forEach(e=>e.textContent=BRAND);save()}
 /* ========= FIND A BUS ========= */
 /* IMPROVE:
  * UX: support more than 1 passenger, show estimated times as 'est.', add reverse-direction search, a swap button, and clear empty/error states.
@@ -314,18 +346,19 @@ function rFind(){app.innerHTML=`<section class="hero"><div class="wrap"><h1>Rese
 function res(){const box=$('#results');if(!box)return;sweep();
  let tr=tripsFor(UI.date).filter(x=>UI.op==='all'||x.op.id===UI.op).filter(x=>{const h=+stopTime(x,UI.f).slice(0,2);return UI.time==='any'||(UI.time==='am'&&h<12)||(UI.time==='pm'&&h>=12&&h<17)||(UI.time==='ev'&&h>=17)}).sort((a,b)=>stopTime(a,UI.f)<stopTime(b,UI.f)?-1:1);
  if(!tr.length){box.innerHTML=`<div class="empty"><b>No matching trips.</b><br>Try another time of day or choose All companies.</div>`;return}
- box.innerHTML=tr.map(x=>{const gone=departed(x,UI.f),a=gone?0:avail(x,UI.f,UI.t),fr=fare(x.op,UI.f,UI.t,'Regular');const bs=gone?['Departed','r']:a===0?['Full','r']:a<=6?['Almost full','o']:['Open','g'];
+ box.innerHTML=tr.map(x=>{const gone=departed(x,UI.f),a=gone?0:avail(x,UI.f,UI.t),fr=fare(x.op,UI.f,UI.t,'Regular');const bs=gone?['Departed','r']:isOut(x)?['Not available','r']:a===0?['Full','r']:a<=6?['Almost full','o']:['Open','g'];
  return`<article class="card res"><div><div class="meta"><b style="color:var(--ink)">${esc(x.op.id)}</b><span>Bus ${x.bus}</span><span class="badge ${bs[1]}">${bs[0]}</span></div>
  <div class="big">${stopTime(x,UI.f)} ${STOPS[UI.f].n} → ${stopTime(x,UI.t)} ${STOPS[UI.t].n}</div>
- <div class="meta"><span>${x.date}</span><span>${x.op.type}</span><span>Sample fare from ${peso(fr.total)}</span><span>${gone?'Already left your boarding stop':a+' of '+SEATS+' seats free for this segment'}</span></div><div class="meter" aria-hidden="true"><i style="width:${a/SEATS*100}%"></i></div></div>
+ <div class="meta"><span>${x.date}</span><span>${x.op.type}</span><span>Sample fare from ${peso(fr.total)}</span><span>${gone?'Already left your boarding stop':a+' of '+(seatsOf(x)-1)+' seats free for this segment'}</span></div><div class="meter" aria-hidden="true"><i style="width:${a/(seatsOf(x)-1)*100}%"></i></div></div>
  <button class="btn" data-act="open" data-id="${esc(x.id)}" ${a?'':'disabled'}>Select seat</button></article>`}).join('')}
 /* ========= SEAT DIALOG & CHECKOUT ========= */
 function openDlg(h){const sc=dlg.open?($('.db',dlg)||{}).scrollTop:0;dlg.innerHTML=h;if(!dlg.open)dlg.showModal();const d=$('.db',dlg);if(d&&sc)d.scrollTop=sc}
-function seatMap(tr){const{f,t}=UI;const btn=(n,pos)=>{const st=seatState(tr,n,f,t);return`<button class="seat ${st}" data-act="seat" data-s="${n}" aria-label="Seat ${n}, ${pos}, ${LBL[st]}" ${['occupied','blocked','held'].includes(st)?'disabled':''} ${st==='mine'?'aria-pressed="true"':''}>${n}</button>`};
- let h=`<div class="bus"><div class="front"><span>🚪 Front entrance</span><span>Driver 🧑‍✈️</span></div><div class="srow" style="justify-content:flex-start">${btn(1,'window')}</div>`,n=2;
- for(let r=0;r<11;r++){h+='<div class="srow">';for(let c=0;c<4;c++){if(c===2)h+='<i class="aisle"></i>';h+=btn(n++,c%3===0?'window':'aisle')}h+='</div>'}
- h+='<div class="srow" style="border-top:2px dashed var(--line);padding-top:8px">';for(let c=0;c<5;c++)h+=btn(n++,c%4===0?'window':'middle');h+='</div></div>';
- return h+`<div class="leg"><span><i style="background:var(--tealbg);border:1px solid var(--teal)"></i>Available</span><span><i style="background:var(--blue)"></i>Selected</span><span><i style="background:var(--redbg);border:1px solid var(--red)"></i>Occupied</span><span><i style="background:#fff6d1;border:1px solid var(--yel)"></i>Held / awaiting exit</span></div>`}
+const driverSeat='<div class="seat driver" role="img" aria-label="Seat 1, driver seat, not available"><b>1</b><small>Driver</small></div>';
+function busGrid(cell,lay){lay=lay||LAYOUTS.L50;let h=`<div class="bus"><div class="front"><span>🚪 Front entrance</span><span>Driver 🧑‍✈️</span></div><div class="srow" style="justify-content:flex-start">${cell(DRIVER,'driver')}</div>`,n=2;
+ for(let r=0;r<lay.rows;r++){h+='<div class="srow">';for(let c=0;c<4;c++){if(c===2)h+='<i class="aisle"></i>';h+=cell(n++,c%3===0?'window':'aisle')}h+='</div>'}
+ h+='<div class="srow" style="border-top:2px dashed var(--line);padding-top:8px">';for(let c=0;c<lay.back;c++)h+=cell(n++,c===0||c===lay.back-1?'window':'middle');return h+'</div></div>'}
+function seatMap(tr){const{f,t}=UI;const btn=(n,pos)=>{if(n===DRIVER)return driverSeat;const st=seatState(tr,n,f,t);return`<button class="seat ${st}" data-act="seat" data-s="${n}" aria-label="Seat ${n}, ${pos}, ${LBL[st]}" ${['occupied','blocked','held'].includes(st)?'disabled':''} ${st==='mine'?'aria-pressed="true"':''}>${n}</button>`};
+ return busGrid(btn,layoutOf(tr))+`<p class="mut" style="font-size:12px;text-align:center;margin:8px 0 0">Seat plan: ${layoutOf(tr).name}</p><div class="leg"><span><i style="background:var(--tealbg);border:1px solid var(--teal)"></i>Available</span><span><i style="background:var(--blue)"></i>Selected</span><span><i style="background:var(--redbg);border:1px solid var(--red)"></i>Occupied</span><span><i style="background:#fff6d1;border:1px solid var(--yel)"></i>Held / awaiting exit</span><span><i style="background:var(--navy)"></i>Driver seat (1)</span></div>`}
 function rSeat(){const tr=tripById(UI.trip),fr=fare(tr.op,UI.f,UI.t,UI.cat),c=S.cards[UI.card],h=S.holds[hk(tr,UI.seat)];UI.mode='seat';
  openDlg(`<div class="dh"><h3 style="margin:0">${esc(tr.op.id)} · Bus ${tr.bus} · ${STOPS[UI.f].n} → ${STOPS[UI.t].n}</h3><button class="btn g sm" data-act="close">Close</button></div>
  <div class="db"><div class="split"><div>${seatMap(tr)}<p class="mut" style="font-size:12.5px;text-align:center;margin-top:10px">Tap a yellow seat to be notified when its previous passenger exits.</p></div>
@@ -334,31 +367,38 @@ function rSeat(){const tr=tripById(UI.trip),fr=fare(tr.op,UI.f,UI.t,UI.cat),c=S.
  <dl><dt>Base fare (sample)</dt><dd>${peso(fr.base)}</dd><dt>Discount</dt><dd>−${peso(fr.disc)}</dd><dt>Total</dt><dd style="font-size:1.2rem">${peso(fr.total)}</dd></dl>
  ${UI.cat!=='Regular'?'<p class="mut" style="font-size:12.5px">A valid ID for this passenger type must be shown when boarding.</p>':''}
  ${UI.seat&&h?`<p class="note">Seat held for you: <span id="hold">${Math.max(0,Math.round((h.exp-Date.now())/1000))}</span>s left</p>`:''}
- <h3 style="margin-top:14px">Transit card (simulated scan)</h3><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn g sm" data-act="scan">Scan / tap my card</button></div>
- <div style="display:flex;gap:8px;margin-top:8px"><input id="cn" placeholder="Or type card number" aria-label="Card number" inputmode="numeric"><button class="btn g sm" data-act="usecard">Use</button></div>
- ${c?`<p style="margin-top:8px"><b>${mask(UI.card)}</b> · ${esc(PAX[c.owner].name)} · Balance ${peso(c.bal)} · <span class="badge ${c.status==='Active'?'g':'r'}">${c.status}</span></p>`:'<p class="mut" style="margin-top:8px">No card scanned yet. On Android Chrome this reads a real NFC card; elsewhere it uses your linked card.</p>'}
- <button class="btn t" style="width:100%;margin-top:12px" data-act="pay" ${UI.busy?'disabled':''}>${UI.busy?'Processing…':'Confirm payment · '+peso(fr.total)}</button></div></div></div>`)}
+ <p class="mut" style="font-size:12.5px;margin-top:14px">Booking reserves your seat. You pay and check in from My Bookings.</p>
+ <button class="btn t" style="width:100%;margin-top:12px" data-act="book" ${UI.seat?'':'disabled'}>${UI.seat?'Book seat '+UI.seat+' · '+peso(fr.total):'Select a seat'}</button></div></div></div>`)}
 /* IMPROVE:
  * This is a simulated payment (setTimeout then success). Replace with: server creates a gateway payment (GCash, Maya, card via PayMongo/Xendit),
  * user is redirected to the gateway, and the booking is confirmed only after a verified webhook. Use an idempotency key, handle pending/failed/expired,
  * and never collect or store raw card details. Label sandbox payments clearly.
  */
-function pay(){if(UI.busy)return;const tr=tripById(UI.trip),{f,t,seat,cat}=UI,c=S.cards[UI.card],px=S.pax,pname=who();
- if(!seat)return toast('Select a seat first.');if(!c)return toast('Scan or enter a registered card.');
- if(c.status!=='Active')return toast('This card is blocked. Use another card.');
- if(c.owner!==px)return toast('That card is linked to another passenger.');if(departed(tr,f))return toast('This bus has already left your boarding stop.');
- const fr=fare(tr.op,f,t,cat);if(c.bal<fr.total)return toast('Balance is too low. Top up in Transit Card.');
- const idem=[tr.id,seat,S.pax,f,t].join('|'),dup=S.txs.find(x=>x.idem===idem&&['Successful','Pending'].includes(x.status));
- if(dup)return toast('This booking is already paid. See My Bookings.');
+function book(){if(S.pax==='OP')return toast('Switch to a passenger account to book a seat.');
+ const tr=tripById(UI.trip),{f,t,seat,cat}=UI,px=S.pax,pname=who();
+ if(!seat)return toast('Select a seat first.');if(seat===DRIVER)return toast('Seat 1 is the driver seat.');
+ if(departed(tr,f))return toast('This bus has already left your boarding stop.');
+ if(isOut(tr))return toast('This bus is not taking bookings right now.');
  if(seatState(tr,seat,f,t)!=='mine')return toast('Your seat hold expired. Pick a seat again.'),rSeat();
- UI.busy=true;const tx={ref:'TX-'+(100000+nid()),idem,card:UI.card,amt:fr.total,status:'Pending',type:'fare',ts:stamp(),desc:`${tr.op.id} ${STOPS[f].n} → ${STOPS[t].n}`};S.txs.unshift(tx);save();rSeat();
- setTimeout(()=>{UI.busy=false;// re-validate right before commit (a backend must do this atomically)
-  if(seatState(tr,seat,f,t)!=='mine'){tx.status='Failed';save();toast('Seat no longer available. You were not charged.');return dlg.open&&UI.mode==='seat'?rSeat():undefined}
-  c.bal=Math.round((c.bal-fr.total)*100)/100;tx.status='Successful';
-  const id='BK'+nid(),b={id,tripId:tr.id,seat,from:f,to:t,pax:px,name:pname,cat,status:'Confirmed',pay:'Paid',base:fr.base,disc:fr.disc,fare:fr.total,txRef:tx.ref,rc:'RC-'+(200000+nid()),card:UI.card,ts:stamp()};
-  tx.bk=id;S.bookings.push(b);delete S.holds[hk(tr,seat)];
-  note(px,`Booking ${id} confirmed. Seat ${seat}, ${STOPS[f].n} → ${STOPS[t].n}.`);note(px,`Payment ${peso(fr.total)} received (${tx.ref}).`);
-  if(c.bal<50)note(px,'Low card balance. Please top up.');S.log.unshift({ts:stamp(),who:pname,action:'Booking paid',rec:id});UI.seat=null;save();dlg.close();render();showReceipt(id)},700)}
+ const fr=fare(tr.op,f,t,cat),id='BK'+nid();
+ S.bookings.push({id,tripId:tr.id,seat,from:f,to:t,pax:px,name:pname,cat,status:'Booked',pay:'Unpaid',base:fr.base,disc:fr.disc,fare:fr.total,ts:stamp()});
+ delete S.holds[hk(tr,seat)];
+ note(px,`Seat ${seat} booked, ${STOPS[f].n} → ${STOPS[t].n}. Pay in My Bookings to check in.`);
+ opNote(`🪑 ${pname} booked Seat ${seat} · ${STOPS[f].n} → ${STOPS[t].n} (${tr.op.id} ${tr.time})`,'booked');
+ S.log.unshift({ts:stamp(),who:pname,action:'Seat booked',rec:id});UI.seat=null;dlg.close();S.view='trips';render();scrollTo(0,0);toast('Seat booked. Pay to check in.')}
+/* Paying = checking in. Simulated with the prototype transit card. */
+function payBooking(id){const b=S.bookings.find(x=>x.id===id&&x.pax===S.pax);if(!b)return;if(b.status!=='Booked')return toast('This booking is already paid.');if(b.xfer)return toast('Respond to the transfer offer first.');
+ const tr=tripById(b.tripId),num=PAX[S.pax].card,c=S.cards[num];
+ if(!c)return toast('Link a transit card first in Transit Card.');if(c.status!=='Active')return toast('This card is blocked. Use another card.');
+ if(c.bal<b.fare)return toast('Balance is too low. Top up in Transit Card.');
+ c.bal=Math.round((c.bal-b.fare)*100)/100;
+ const tx={ref:'TX-'+(100000+nid()),idem:b.id,card:num,amt:b.fare,status:'Successful',type:'fare',ts:stamp(),desc:`${tr.op.id} ${STOPS[b.from].n} → ${STOPS[b.to].n}`,bk:b.id};
+ S.txs.unshift(tx);Object.assign(b,{status:'Checked in',pay:'Paid',txRef:tx.ref,rc:'RC-'+(200000+nid()),card:num,paidAt:stamp()});
+ note(b.pax,`Paid ${peso(b.fare)} (${tx.ref}). You are checked in. Seat ${b.seat}.`);if(c.bal<50)note(b.pax,'Low card balance. Please top up.');
+ opNote(`💳 ${b.name} paid ${peso(b.fare)} and checked in · Seat ${b.seat} · ${STOPS[b.from].n} → ${STOPS[b.to].n} (${tr.op.id} ${tr.time})`,'paid');
+ S.log.unshift({ts:stamp(),who:b.name,action:'Paid and checked in',rec:b.id});render();showReceipt(b.id)}
+function opBell(){const ns=S.notes.filter(n=>n.pax==='OP');ns.forEach(n=>n.read=true);save();renderNav();UI.mode='bell';
+ openDlg(`<div class="dh"><h3 style="margin:0">Notifications</h3><button class="btn g sm" data-act="close">Close</button></div><div class="db"><div class="list">${ns.length?ns.slice(0,40).map(n=>`<div class="card" style="padding:10px 14px"><b>${esc(n.text)}</b><div class="mut" style="font-size:12px">${n.ts}</div></div>`).join(''):'<div class="empty">No updates yet. You will be told when a passenger books, pays and checks in, or is getting off.</div>'}</div></div>`)}
 /* ========= TICKETS & RECEIPTS ========= */
 /* IMPROVE:
  * Fallback QR is a decorative pattern, not a scannable code. Remove it once QR generation moves to the server.
@@ -383,16 +423,7 @@ async function camScan(onCode){if(!('BarcodeDetector' in window))return toast('C
  */
 function validateTicket(code){const p=String(code).trim().split('|'),b=S.bookings.find(x=>x.id===p[1]);
  if(p[0]!=='LSB'||!b||p[3]!==String(hash(p[1]+p[2])))return toast('Invalid ticket code.');
- if(UI.opTrip&&b.tripId!==UI.opTrip)return toast('This ticket is for a different trip. Select that trip first.');
- if(b.status==='Cancelled')return toast('This ticket was cancelled.');
- if(b.status!=='Confirmed')return toast(`Ticket already used (${b.status}).`);
- setStatus(b,'Checked In');render();toast(`Valid. ${b.name}, seat ${b.seat}, checked in.`)}
-/* Tap-to-board: a paid booking is checked in AND boarded automatically when its card is tapped. No staff step needed. */
-function tapBoard(card){const c=S.cards[card];if(!c)return toast('Card not recognised.');if(c.status!=='Active')return toast('Card is blocked. Ask staff for help.');
- const b=S.bookings.filter(x=>x.card===card&&x.status==='Confirmed'&&(S.pax!=='OP'||!UI.opTrip||x.tripId===UI.opTrip)).sort((a,b)=>a.tripId<b.tripId?-1:1)[0];
- if(!b)return toast('No paid booking is waiting for this card.');
- setStatus(b,'Checked In');setStatus(b,'Boarded');note(b.pax,`Boarded automatically. Seat ${b.seat}. Have a safe trip.`);
- S.log.unshift({ts:stamp(),who:'Card reader',action:'Auto boarding by card tap',rec:`${b.id} seat ${b.seat}`});render();toast(`${b.name} boarded. Seat ${b.seat}.`)}
+ const tr=tripById(b.tripId);toast(`${b.name} · Seat ${b.seat} · ${b.status} · ${tr.op.id} ${tr.time}`)}
 function registerCard(v){v=norm(v);if(v.length<8)return toast('Enter at least 8 digits of the card number.');
  if(S.cards[v]&&S.cards[v].owner!==S.pax)return toast('That card is linked to another passenger.');
  if(!S.cards[v])S.cards[v]={owner:S.pax,bal:0,status:'Active'};PAX[S.pax].card=v;S.link[S.pax]=v;logIt('Card linked',mask(v));render();toast('Card linked. Top up to use it.')}
@@ -403,19 +434,17 @@ function showReceipt(id){const b=S.bookings.find(x=>x.id===id),tr=tripById(b.tri
  <div><dl><dt>Receipt no.</dt><dd>${b.rc}</dd><dt>Transaction</dt><dd>${b.txRef}</dd><dt>Booking ref</dt><dd>${b.id}</dd><dt>Passenger</dt><dd>${esc(b.name)}</dd><dt>Card</dt><dd>${mask(b.card)}</dd><dt>Operator / bus</dt><dd>${esc(tr.op.id)} · ${tr.bus}</dd><dt>Trip</dt><dd>${tr.date} · departs ${tr.time}</dd><dt>Boarding → destination</dt><dd>${STOPS[b.from].n} → ${STOPS[b.to].n}</dd><dt>Seat</dt><dd>${b.seat}</dd><dt>Base fare</dt><dd>${peso(b.base)}</dd><dt>Discount (${b.cat})</dt><dd>−${peso(b.disc)}</dd><dt>Amount paid</dt><dd>${peso(b.fare)}</dd><dt>Payment</dt><dd>Transit card · ${S.txs.find(x=>x.ref===b.txRef).status}</dd></dl>
  <div class="noprint" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" onclick="window.print()">Print / save as PDF</button><button class="btn g sm" data-act="email">Email receipt</button></div></div></div></div>`);drawQR(tcode(b))}
 /* ========= MY BOOKINGS ========= */
-const STAGES=['Booked','Checked In','Boarded','Approaching','Alighted','Completed'];
-function stageIdx(s){return{'Confirmed':0,'Checked In':1,'Boarded':2,'Approaching Destination':3,'Alighting Pending':3,'Alighted':5}[s]}
+const STAGES=['Booked','Checked in','Completed'];
+function stageIdx(s){return{'Booked':0,'Checked in':1,'Completed':2}[s]}
 /* IMPROVE:
  * Bookings must be fetched from the server and filtered by the signed-in user's id server-side. Add upcoming/past tabs, ticket download/print,
  * cancellation requests per policy, and payment history. Do not promise refunds that are not actually supported.
  */
 function rTrips(){const mine=S.bookings.filter(b=>b.pax===S.pax).reverse(),ns=S.notes.filter(n=>n.pax===S.pax),w=S.watch.filter(x=>x.pax===S.pax);
- app.innerHTML=`<div class="wrap sec"><h2>My bookings</h2><div class="list">${mine.length?mine.map(b=>{const tr=tripById(b.tripId),i=stageIdx(b.status);return`<article class="card"><div class="meta"><b style="color:var(--ink)">${esc(tr.op.id)} · ${tr.bus}</b><span>${tr.date} ${tr.time}</span><span>Seat ${b.seat}</span><span>${peso(b.fare)}</span><span class="badge ${b.status==='Cancelled'?'r':'b'}">${b.status}</span></div>
+ app.innerHTML=`<div class="wrap sec"><h2>My bookings</h2><p class="mut">Booked: you reserved a seat. Checked in: you paid. Completed: the operator confirmed you got off.</p><div class="list">${mine.length?mine.map(b=>{const tr=tripById(b.tripId),i=stageIdx(b.status);return`<article class="card"><div class="meta"><b style="color:var(--ink)">${esc(tr.op.id)} · ${tr.bus}</b><span>${tr.date} ${tr.time}</span><span>Seat ${b.seat}</span><span>${peso(b.fare)}</span><span class="badge ${b.status==='Completed'?'g':b.status==='Checked in'?'b':'o'}">${b.status}</span></div>
  <h3 style="margin:8px 0 0">${STOPS[b.from].n} → ${STOPS[b.to].n}</h3>
- ${b.status!=='Cancelled'?`<div class="steps">${STAGES.map((s,k)=>`<span class="${k<=i?'on':''}">${s}</span>`).join('')}</div>`:''}
- <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" data-act="rcpt" data-id="${b.id}">Ticket & receipt</button>
- ${b.status==='Confirmed'?`<button class="btn t sm" data-act="tapme" data-id="${b.id}">Tap card to board</button> <button class="btn g sm" data-act="cancel" data-id="${b.id}">Cancel & refund</button>`:''}
- ${['Approaching Destination','Alighting Pending'].includes(b.status)?`<button class="btn t sm" data-act="selfexit" data-id="${b.id}">I have got off</button>`:''}</div></article>`}).join(''):`<div class="empty"><b>No bookings yet.</b><br>Find a bus and reserve a seat to see it here.</div>`}</div>
+ <div class="steps">${STAGES.map((s,k)=>`<span class="${k<=i?'on':''}">${s}</span>`).join('')}</div>${b.movedFrom?`<p class="mut" style="margin:8px 0 0">Transferred from bus ${esc(tripById(b.movedFrom.trip).bus)}, seat ${b.movedFrom.seat}. Your payment carried over.</p>`:''}${b.xfer?offerBox(b):''}<div style="margin:8px 0"><button class="btn g sm" data-act="rptbus" data-id="${b.id}">Report a problem with this bus</button></div>
+ <div style="display:flex;gap:8px;flex-wrap:wrap">${b.status==='Booked'&&!b.xfer?`<button class="btn t sm" data-act="paybk" data-id="${b.id}">Pay ${peso(b.fare)} & check in</button><button class="btn g sm" data-act="cancel" data-id="${b.id}">Cancel booking</button>`:''}${b.status==='Checked in'?`<button class="btn sm" data-act="rcpt" data-id="${b.id}">Ticket & receipt</button>${b.exit||b.xfer?(b.exit?'<span class="badge o">Operator told: getting off</span>':''):`<button class="btn g sm" data-act="gettingoff" data-id="${b.id}">I'm getting off</button>`}`:''}${b.status==='Completed'&&b.pay==='Paid'?`<button class="btn g sm" data-act="rcpt" data-id="${b.id}">Receipt</button>`:''}</div></article>`}).join(''):`<div class="empty"><b>No bookings yet.</b><br>Find a bus and book a seat to see it here.</div>`}</div>
  ${w.length?`<h3 style="margin-top:24px">Waiting for a seat</h3>${w.map(x=>`<p class="mut">Seat ${x.seat} on ${esc(x.tripId.split('|')[1])} ${x.tripId.split('|')[2]}, from ${STOPS[x.from].n}. We will notify you once the previous passenger's exit is confirmed.</p>`).join('')}`:''}
  <h3 style="margin-top:24px">Notifications</h3><div class="list">${ns.length?ns.slice(0,12).map(n=>`<div class="card" style="padding:10px 14px"><b>${esc(n.text)}</b><div class="mut" style="font-size:12px">${n.ts} · in-app (email/SMS/push need extra infrastructure)</div></div>`).join(''):'<div class="empty">Nothing yet.</div>'}</div></div>`;
  S.notes.forEach(n=>{if(n.pax===S.pax)n.read=true});save();renderNav()}
@@ -460,29 +489,210 @@ function rTrack(){const trs=tripsFor(today());if(!trs.find(x=>x.id===UI.trk))UI.
   MARK=L.marker(pts[0],{icon:L.divIcon({html:'🚌',className:'busico',iconSize:[30,30]})}).addTo(MAP);MAP.fitBounds(pts,{padding:[30,30]})}
  moveBus()}
 /* ========= OPERATOR DASHBOARD ========= */
-function setStatus(b,s){b.status=s;const tr=tripById(b.tripId);logIt(`Status → ${s}`,`${b.id} seat ${b.seat}`);
- if(s==='Approaching Destination')note(b.pax,`Approaching ${STOPS[b.to].n}. Get ready to alight.`);
- if(s==='Alighting Pending')note(b.pax,`Please confirm you got off at ${STOPS[b.to].n}.`);
- if(s==='Alighted'){note(b.pax,`Trip completed. Thank you for riding ${tr.op.id}.`);S.log.unshift({ts:stamp(),who:who(),action:'Seat handover recorded',rec:`Seat ${b.seat} released at ${STOPS[b.to].n} (${tr.bus})`});
-  S.watch=S.watch.filter(w=>{if(w.tripId===b.tripId&&w.seat===b.seat&&w.from>=b.to){note(w.pax,`Seat ${w.seat} is ready for you on ${tr.op.id} from ${STOPS[w.from].n}. Book it now.`);return false}return true})}}
 /* IMPROVE:
  * Operator tools need real operator accounts with role-based access limited to their own trips, plus audit logs. UI hiding is not security.
  */
-function rOps(){const ids=[...new Set(S.bookings.map(b=>b.tripId))];if(!ids.includes(UI.opTrip))UI.opTrip=ids[0]||null;const tr=UI.opTrip&&tripById(UI.opTrip),bk=tr?S.bookings.filter(b=>b.tripId===tr.id&&b.status!=='Cancelled'):[];
- const nx=bk.filter(b=>['Boarded','Approaching Destination','Alighting Pending'].includes(b.status)).sort((a,b)=>a.to-b.to)[0];
- app.innerHTML=`<div class="wrap sec"><h2>Operator dashboard</h2><p class="mut">For staff use while the bus is stopped. Role: Station / boarding staff (demo).</p>
- <div class="card" style="margin-bottom:14px"><h3>Boarding reader: tap to board</h3><p class="mut">A paid passenger is checked in and marked Boarded automatically when their card is tapped. No staff confirmation needed.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn t sm" data-act="tapnfc">Read NFC card</button><select id="tapc" aria-label="Demo card" style="width:auto">${Object.keys(S.cards).map(c=>`<option value="${c}">${mask(c)} ${esc(PAX[S.cards[c].owner].name)}</option>`).join('')}</select><button class="btn g sm" data-act="tapdemo">Simulate tap</button></div></div>
- <div class="card" style="margin-bottom:14px"><h3>Fallback: validate a QR ticket</h3><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn t sm" data-act="vscan">Scan QR with camera</button><input id="tc" placeholder="Or paste ticket code (LSB|BK…)" aria-label="Ticket code" style="flex:1;min-width:200px"><button class="btn g sm" data-act="vcode">Validate</button></div><div id="cam"></div></div>
- ${tr?`<label style="max-width:420px">Trip<select data-chg="opTrip">${ids.map(i=>{const x=tripById(i);return`<option value="${esc(i)}" ${i===tr.id?'selected':''}>${x.op.id} ${x.bus} · ${x.date} ${x.time}</option>`}).join('')}</select></label>
- <div class="meta" style="margin:12px 0"><span>Booked seats: ${bk.length}</span><span>Next stop: <b>${nx?STOPS[nx.to].n:'none pending'}</b></span><button class="btn g sm" data-act="delay">Report 10 min delay</button><button class="btn g sm" data-act="gps">Share / stop sharing this device's GPS</button></div>
- <div class="card tw"><table><thead><tr><th>Seat</th><th>Passenger</th><th>Segment</th><th>Status</th><th>Action</th></tr></thead><tbody>${bk.map(b=>`<tr><td>${b.seat}</td><td>${esc(b.name)}</td><td>${STOPS[b.from].n} → ${STOPS[b.to].n}</td><td><span class="badge b">${b.status}</span></td><td>${b.status!=='Alighted'?`<button class="btn sm" data-act="adv" data-id="${b.id}">${OPLBL[b.status]}</button> <button class="btn g sm" data-act="exit" data-id="${b.id}">Assisted exit</button>`:'<span class="badge g">Seat released</span>'}</td></tr>`).join('')}</tbody></table></div>`
- :`<div class="empty"><b>No booked trips yet.</b><br>Switch to Passenger A, book Seat 12 (Sta. Cruz → Cubao), then return here.</div>`}
- <h3 style="margin-top:26px">Trip log & audit trail</h3><div class="card tw"><table><thead><tr><th>Time</th><th>By</th><th>Action</th><th>Record</th></tr></thead><tbody>${S.log.slice(0,12).map(l=>`<tr><td>${l.ts}</td><td>${esc(l.who)}</td><td>${esc(l.action)}</td><td>${esc(l.rec)}</td></tr>`).join('')||'<tr><td colspan="4" class="mut">No events yet.</td></tr>'}</tbody></table></div></div>`}
+function rOps(){
+ sweep();
+ if(!UI.opDate){const lb=[...S.bookings].reverse().find(b=>b.status!=='Completed')||S.bookings[S.bookings.length-1];UI.opDate=lb?lb.tripId.split('|')[0]:today()}
+ const date=UI.opDate,all=tripsFor(date),nact=x=>S.bookings.filter(b=>b.tripId===x.id&&b.status!=='Completed').length;
+ if(!all.some(x=>x.id===UI.opTrip))UI.opTrip=(all.find(nact)||all[0]||{}).id||null;
+ const tr=UI.opTrip&&tripById(UI.opTrip),lay=tr?layoutOf(tr):LAYOUTS.L50,PS=lay.seats-1,nseg=STOPS.length-1,f=UI.opStop==null?-1:Math.min(Math.max(+UI.opStop,-1),nseg-1);
+ let trip='';
+ if(tr){
+  const flag=S.flags[tr.id],fi=flag&&S.incidents.find(i=>i.id===flag.inc),
+   inc=incoming(tr).map(b=>({...b,seat:b.xfer.toSeat,status:'Offered',from:b.from,to:b.to,fromBus:tripById(b.xfer.from).bus})),
+   mine=S.bookings.filter(b=>b.tripId===tr.id),live=[...mine.filter(b=>b.status!=='Completed'),...inc],
+   seg=Array.from({length:nseg},(_,i)=>new Set(live.filter(b=>b.from<=i&&i<b.to).map(b=>b.seat)).size),
+   inSeg=b=>f<0||(b.from<=f&&f<b.to),
+   used=f<0?new Set(live.map(b=>b.seat)).size:seg[f],
+   full=f<0?(live.length>0&&seg.every(c=>c>=PS)):seg[f]>=PS,
+   fullSegs=seg.map((c,i)=>c>=PS?i:-1).filter(i=>i>=0),
+   cnt=x=>mine.filter(b=>b.status===x).length,
+   rank={'Checked in':0,'Offered':1,'Booked':1,'Completed':2},key=b=>b.status==='Checked in'&&b.exit?-1:rank[b.status],
+   rows=[...mine,...inc].sort((a,b)=>key(a)-key(b)||a.seat-b.seat),
+   cell=n=>{if(n===DRIVER)return driverSeat;const lv=live.filter(b=>b.seat===n&&inSeg(b)),h=S.holds[hk(tr,n)],top=lv.find(b=>b.status==='Checked in')||lv.find(b=>b.status==='Booked')||lv[0],
+    cls=top?(top.status==='Checked in'?'ci':top.status==='Offered'?'tr':'bk'):h?'held':'free',
+    lab=lv.length?`Seat ${n}: `+lv.map(b=>`${b.name} (${b.status==='Offered'?'transfer offered from '+b.fromBus:b.status}, ${STOPS[b.from].n} to ${STOPS[b.to].n})`).join('; '):`Seat ${n}, ${h?'held, not booked yet':'available'}`;
+    return`<div class="seat ${cls}" role="img" aria-label="${esc(lab)}" title="${esc(lab)}">${n}</div>`},
+   xs=fi&&fi.xf?{a:fi.xf.filter(r=>r.status==='Accepted').length,d:fi.xf.filter(r=>r.status!=='Accepted'&&r.status!=='Offered').length,w:fi.xf.filter(r=>r.status==='Offered').length}:null,
+   flagBox=flag?`<div class="card" style="margin:14px 0 0;border-left:4px solid var(--red);background:var(--redbg)"><span class="badge r">${flag.type==='Mechanical'?'OUT OF SERVICE':'INCIDENT REPORTED'}</span> <b>${fi?esc(fi.type)+' near '+esc(STOPS[fi.stop].n):''}</b> <span class="mut">${fi?fi.ts:''}. New bookings on this bus are closed.</span>${xs?`<p style="margin:8px 0 0">Transfers: <b>${xs.a}</b> accepted · <b>${xs.d}</b> declined · <b>${xs.w}</b> waiting</p>`:''}<p style="margin:8px 0 0"><button class="btn g sm" data-act="reopen" data-id="${esc(tr.id)}">Reopen bus for booking</button></p></div>`:'';
+  trip=`${flagBox}<div class="card" style="margin:14px 0 10px;border-left:4px solid ${full?'var(--red)':'var(--teal)'}"><span class="badge ${full?'r':'g'}">${full?'BUS FULL':'Seats available'}</span> ${f<0?`<b>Whole route</b>: ${used} of ${PS} passenger seats have a booking on this trip.`:`<b>${STOPS[f].n} → ${STOPS[f+1].n}</b>: ${used} of ${PS} passenger seats taken, <b>${PS-used}</b> available.`} <span class="mut">Seat 1 is the driver seat and is not counted. Seat plan: ${lay.name}.</span>
+   <p class="mut" style="margin:8px 0 0">${fullSegs.length?`Fully booked on ${fullSegs.length} segment${fullSegs.length>1?'s':''}: ${fullSegs.map(i=>`${STOPS[i].n} → ${STOPS[i+1].n}`).join(', ')}.`:'No segment of this trip is fully booked.'}</p></div>
+  <div class="meta" style="margin-bottom:10px"><span class="badge o">Booked ${cnt('Booked')}</span><span class="badge b">Checked in ${cnt('Checked in')}</span><span class="badge g">Completed ${cnt('Completed')}</span><button class="btn r sm" data-act="incopen">Report accident / bus problem for this bus</button></div>
+  <h3>Passengers</h3><div class="card tw"><table><thead><tr><th>Seat</th><th>Passenger</th><th>Route</th><th>Payment</th><th>Status</th><th>Action</th></tr></thead><tbody>${rows.map(b=>{const off=b.status==='Offered',out=b.xfer&&b.xfer.status==='Offered';return`<tr ${b.status==='Checked in'&&b.exit?'style="background:var(--orgbg)"':''}><td><b>${b.seat}</b></td><td>${esc(b.name)}</td><td>${STOPS[b.from].n} → ${STOPS[b.to].n}</td><td>${b.pay==='Paid'?`Paid ${peso(b.fare)}`:'<span class="mut">Not paid yet</span>'}</td><td>${off?`<span class="badge o">Transfer offered</span> <span class="mut">from ${esc(b.fromBus)}</span>`:`<span class="badge ${b.status==='Completed'?'g':b.status==='Checked in'?'b':'o'}">${b.status}</span>${out?' <span class="badge o">Transfer offered</span>':''}${b.status==='Checked in'&&b.exit?' <span class="badge o">Getting off</span>':''}`}</td><td>${off||out?'<span class="mut">Waiting for passenger</span>':b.status==='Checked in'?`<button class="btn t sm" data-act="done" data-id="${b.id}">Completed</button>`:b.status==='Booked'?'<span class="mut">Waiting for payment</span>':'✓'}</td></tr>`}).join('')||'<tr><td colspan="6" class="mut">No bookings on this trip yet. Seats booked by passengers appear here and on the seat map.</td></tr>'}</tbody></table></div>
+  <div class="split" style="margin-top:20px"><div class="opmap"><h3>Seat map · ${f<0?'whole route':esc(STOPS[f].n)+' → '+esc(STOPS[f+1].n)}</h3>${busGrid(cell,lay)}<div class="leg"><span><i style="background:var(--tealbg);border:1px solid var(--teal)"></i>Available</span><span><i style="background:#fff6d1;border:1px solid var(--yel)"></i>Booked</span><span><i style="background:var(--blue)"></i>Checked in</span><span><i style="background:#efe3ff;border:1px dashed #7c3aed"></i>Transfer offered</span><span><i style="background:var(--navy)"></i>Driver (1)</span></div><p class="mut" style="font-size:12.5px;text-align:center">Hover or focus a seat to see the passenger and segment.</p></div>
+  <div><h3>Seats taken by segment</h3><div class="card" style="padding:6px 14px">${seg.map((c,i)=>`<div class="segrow" ${i===f?'style="font-weight:700"':''}><span>${esc(STOPS[i].n)} → ${esc(STOPS[i+1].n)}</span><span class="segbar"><i class="${c>=PS?'full':''}" style="width:${Math.round(c/PS*100)}%"></i></span><span>${c}/${PS}</span>${c>=PS?'<span class="badge r">FULL</span>':'<span></span>'}</div>`).join('')}</div></div></div>`}
+ const reports=S.incidents.slice(0,3);
+ app.innerHTML=`<div class="wrap sec"><h2>Operator dashboard</h2><p class="mut">See who booked, who paid and checked in, and who is getting off. When a passenger has got off, press Completed. Updates also appear under the 🔔 bell.</p>
+ <div class="fgrid" style="margin:12px 0;max-width:760px"><label>Date<input type="date" data-chg="opDate" value="${date}"></label>
+ <label>Trip<select data-chg="opTrip">${all.map(x=>{const n=nact(x);return`<option value="${esc(x.id)}" ${tr&&x.id===tr.id?'selected':''}>${x.op.id} ${x.bus} · ${x.time}${S.flags[x.id]?' · OUT OF SERVICE':n?' · '+n+' active':''}</option>`}).join('')}</select></label>
+ <label>Seat map for<select data-chg="opStop"><option value="-1" ${f<0?'selected':''}>Whole route (all booked seats)</option>${STOPS.slice(0,-1).map((x,i)=>`<option value="${i}" ${i===f?'selected':''}>${esc(x.n)} → ${esc(STOPS[i+1].n)}</option>`).join('')}</select></label></div>
+ ${trip||'<div class="empty"><b>No trips on this date.</b></div>'}
+ <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:24px"><h3 style="margin:0">Latest incident reports</h3><button class="btn g sm" data-act="nav" data-v="incidents">Open Accident Reports</button></div><div style="height:10px"></div><div class="list">${reports.length?reports.map(i=>{const t=tripById(i.tripId);return`<article class="card"><div class="meta"><span class="badge r">${esc(i.type)}</span><b style="color:var(--ink)">${esc(t.op.id)} ${t.bus} · ${t.date} ${t.time}</b><span>near ${esc(STOPS[i.stop].n)}</span><span>${i.ts}</span>${i.injured?'<span class="badge r">Injuries reported</span>':''}</div><p style="margin:6px 0">${esc(i.notes)}</p>${i.xf&&i.xf.length?`<p class="mut" style="margin:0">Transfer to ${esc(tripById(i.toTrip).bus)}: ${i.xf.map(r=>`${esc(r.name)} seat ${r.seat} → ${r.toSeat} (${r.status})`).join(' · ')}</p>`:''}</article>`}).join(''):'<div class="empty">No reports yet.</div>'}</div>
+ <details style="margin-top:22px"><summary style="cursor:pointer;font-weight:700">More tools: ticket check, delay, GPS, activity log</summary>
+ <div class="card" style="margin:12px 0"><h3>Check a ticket</h3><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn t sm" data-act="vscan">Scan QR with camera</button><input id="tc" placeholder="Or paste ticket code (LSB|BK…)" aria-label="Ticket code" style="flex:1;min-width:200px"><button class="btn g sm" data-act="vcode">Check</button></div><div id="cam"></div></div>
+ <div class="meta" style="margin:12px 0"><button class="btn g sm" data-act="delay">Report 10 min delay</button><button class="btn g sm" data-act="gps">Share / stop sharing this device's GPS</button></div>
+ <h3>Activity log</h3><div class="card tw"><table><thead><tr><th>Time</th><th>By</th><th>Action</th><th>Record</th></tr></thead><tbody>${S.log.slice(0,12).map(l=>`<tr><td>${l.ts}</td><td>${esc(l.who)}</td><td>${esc(l.action)}</td><td>${esc(l.rec)}</td></tr>`).join('')||'<tr><td colspan="4" class="mut">No events yet.</td></tr>'}</tbody></table></div></details></div>`}
+
+/* ========= INCIDENTS & BUS TRANSFERS (operator module) =========
+   IMPROVE: prototype only. In production: store incidents and transfer offers in the database (see db/migrations/003_incidents_transfers.sql),
+   reserve the replacement seat atomically with an expiring hold, send the announcement by push/SMS/email as well as in-app, move the payment record
+   server-side (no new charge), refund through the payment gateway when a passenger declines, and keep an audit log. Accident reports should also
+   follow the operator's real emergency procedure; this page cannot call for help. */
+const affected=tr=>S.bookings.filter(b=>b.tripId===tr.id&&['Booked','Checked in'].includes(b.status)&&!b.xfer);
+function seatOkFor(to,s,b,assign,aff){if(s<2||s>seatsOf(to))return false;if(seatState(to,s,b.from,b.to)!=='free')return false;return!aff.some(o=>o.id!==b.id&&assign[o.id]===s&&o.from<b.to&&b.from<o.to)}
+function autoAssign(){const I=UI.inc,tr=tripById(I.tripId),to=tripById(I.toTrip),aff=affected(tr).sort((a,b)=>a.seat-b.seat);I.assign={};
+ for(const b of aff){let pick=seatOkFor(to,b.seat,b,I.assign,aff)?b.seat:null;if(!pick)for(let s=2;s<=seatsOf(to);s++)if(seatOkFor(to,s,b,I.assign,aff)){pick=s;break}I.assign[b.id]=pick}}
+function incSet(f,v){const I=UI.inc;if(!I)return;if(f==='stop')I.stop=+v;else if(f==='date'){const d=v||today(),all=tripsFor(d);I.date=d;I.tripId=(all.find(x=>affected(x).length&&!isOut(x))||all[0]).id;I.toTrip=null;I.assign={}}else if(f==='tripId'){I.tripId=v;I.toTrip=null;I.assign={}}else I[f]=v;
+ if(f==='toTrip'){I.assign={};if(v)autoAssign()}if(['type','toTrip','tripId','date'].includes(f))rInci()}
+function rInc(){rInci()}
+/* ===== Accident Reports module (operator page) ===== */
+function incNew(tripId){const d=tripId?tripId.split('|')[0]:(UI.opDate||today()),all=tripsFor(d),
+ t=tripId||(all.find(x=>affected(x).length&&!isOut(x))||all.find(x=>!isOut(x))||all[0]).id;
+ return{date:d,tripId:t,type:'Mechanical',stop:0,notes:'',injured:false,toTrip:null,assign:{}}}
+function rInci(){if(!UI.inc)UI.inc=incNew();let I=UI.inc,tr=tripById(I.tripId);if(!tr){I=UI.inc=incNew();tr=tripById(I.tripId)}
+ const all=tripsFor(I.date),mech=I.type==='Mechanical',aff=affected(tr),out=isOut(tr),
+  cands=all.filter(x=>x.id!==tr.id&&!isOut(x)).sort((p,q)=>p.time.localeCompare(q.time)),to=I.toTrip&&tripById(I.toTrip),
+  lo=aff.length?Math.min(...aff.map(b=>b.from)):0,hi=aff.length?Math.max(...aff.map(b=>b.to)):1,
+  free=x=>{let n=0;for(let s=2;s<=seatsOf(x);s++)if(seatState(x,s,lo,hi)==='free')n++;return n};
+ let tf='';
+ if(mech){tf=`<h3 style="margin-top:18px">Transfer passengers to another bus</h3>`+(aff.length?`<p class="mut">${aff.length} passenger${aff.length>1?'s':''} on this bus. Their payment moves with them, so nothing more is charged. Each passenger gets the offer as a notification and can accept or decline. If they decline, their seat on the new bus goes back to other passengers and the fare is returned.</p>
+  <label style="max-width:560px">Replacement bus<select data-chg="inc" data-f="toTrip"><option value="">Choose a bus…</option>${cands.map(x=>`<option value="${esc(x.id)}" ${x.id===I.toTrip?'selected':''} ${x.time<tr.time?'disabled':''}>${x.op.id} ${x.bus} · ${x.time} · ${layoutOf(x).name} · ${x.time<tr.time?'left earlier, cannot pick up passengers':free(x)+' free seats for this stretch'}</option>`).join('')}</select></label>
+  ${to?`<p class="mut" style="margin:10px 0 6px">Seat plan of ${esc(to.bus)}: ${layoutOf(to).name}. Seat numbers can change, so you choose each passenger's seat.</p><div class="card tw"><table><thead><tr><th>Passenger</th><th>Route</th><th>Now</th><th>Seat on ${esc(to.bus)}</th></tr></thead><tbody>${aff.map(b=>`<tr><td>${esc(b.name)}</td><td>${STOPS[b.from].n} → ${STOPS[b.to].n}</td><td>Seat ${b.seat}</td><td><select data-chg="incseat" data-id="${b.id}" aria-label="Seat for ${esc(b.name)}" style="width:auto"><option value="">Choose seat</option>${Array.from({length:seatsOf(to)-1},(_,k)=>k+2).filter(n=>n===I.assign[b.id]||seatOkFor(to,n,b,I.assign,aff)).map(n=>`<option value="${n}" ${n===I.assign[b.id]?'selected':''}>Seat ${n}</option>`).join('')}</select></td></tr>`).join('')}</tbody></table></div>`:''}`:'<p class="mut">No active passengers on this bus, so there is nothing to transfer.</p>')}
+ const xf=S.incidents.flatMap(i=>i.xf||[]),cntx=f=>xf.filter(f).length,
+  stat=(n,l,c)=>`<div class="card" style="padding:14px 16px;${c?'border-left:4px solid '+c:''}"><div style="font-size:1.7rem;font-weight:800;line-height:1.1">${n}</div><div class="mut" style="font-size:13px">${l}</div></div>`,
+  F=UI.incF||'all',list=S.incidents.filter(i=>{const open=!!(S.flags[i.tripId]&&S.flags[i.tripId].inc===i.id);return F==='all'||(F==='open'&&open)||F===i.type}),
+  hist=list.map(i=>{const t=tripById(i.tripId),open=!!(S.flags[i.tripId]&&S.flags[i.tripId].inc===i.id),waiting=(i.xf||[]).some(r=>r.status==='Offered');
+   return`<article class="card" style="border-left:4px solid ${open?'var(--red)':'var(--line)'}"><div class="meta"><span class="badge ${i.type==='Accident'?'r':'o'}">${esc(i.type)}</span><span class="badge ${open?'r':'g'}">${open?'Open: bus closed to bookings':'Closed'}</span><b style="color:var(--ink)">${esc(t.op.id)} ${t.bus} · ${t.date} ${t.time}</b><span>near ${esc(STOPS[i.stop].n)}</span><span>${i.ts}</span>${i.injured?'<span class="badge r">Injuries reported</span>':''}</div>
+   <p style="margin:8px 0 4px">${esc(i.notes)}</p><p class="mut" style="margin:0;font-size:13px">${i.notified!=null?i.notified+' passenger'+(i.notified===1?'':'s')+' notified.':''} ${i.closed?'Closed '+i.closed+'.':''}</p>
+   ${i.xf&&i.xf.length?`<p class="mut" style="margin:8px 0 4px;font-size:13px">Transfer to ${esc(tripById(i.toTrip).op.id)} ${esc(tripById(i.toTrip).bus)} · ${tripById(i.toTrip).time}</p><div class="tw"><table><thead><tr><th>Passenger</th><th>Seat change</th><th>Answer</th></tr></thead><tbody>${i.xf.map(r=>`<tr><td>${esc(r.name)}</td><td>Seat ${r.seat} → ${r.toSeat}</td><td><span class="badge ${r.status==='Accepted'?'g':r.status==='Offered'?'o':'r'}">${r.status==='Offered'?'Waiting':esc(r.status)}</span></td></tr>`).join('')}</tbody></table></div>`:''}
+   ${open?`<p style="margin:10px 0 0"><button class="btn g sm" data-act="reopen" data-id="${esc(i.tripId)}" ${waiting?'disabled':''}>Close report and reopen bus for booking</button>${waiting?' <span class="mut" style="font-size:12.5px">Waiting for passengers to answer their transfer offers.</span>':''}</p>`:''}</article>`}).join('');
+ UI.mode='';
+ app.innerHTML=`<div class="wrap sec"><h2>Accident reports</h2><p class="mut" style="max-width:70ch">Report an accident or a mechanical problem on a bus. Passengers are told through their notifications. For a mechanical problem you can move passengers to another bus, and each passenger chooses to accept or decline.</p>
+ ${S.reports.filter(r=>r.urgent&&(r.status==='Submitted'||r.status==='Under review')).length?`<div class="card" style="border-left:4px solid var(--red);background:var(--redbg);margin-top:14px"><b>${S.reports.filter(r=>r.urgent&&(r.status==='Submitted'||r.status==='Under review')).length} urgent passenger report(s) waiting.</b> <button class="btn r sm" data-act="nav" data-v="inbox" style="margin-left:8px">Review now</button></div>`:''}<div class="grid" style="margin:14px 0 22px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">${stat(S.incidents.length,'Reports filed')}${stat(Object.keys(S.flags).length,'Buses closed now',Object.keys(S.flags).length?'var(--red)':'')}${stat(cntx(r=>r.status==='Offered'),'Transfers waiting','var(--org)')}${stat(cntx(r=>r.status==='Accepted'),'Transfers accepted','var(--teal)')}${stat(cntx(r=>r.status!=='Accepted'&&r.status!=='Offered'),'Declined or no answer')}</div>
+ <div class="card"><h3>New report</h3><p class="note">If anyone is hurt, call emergency services first (911 in the Philippines). This report tells passengers and operators; it does not call for help.</p>
+ <div class="fgrid" style="margin-top:12px"><label>Date<input type="date" data-chg="inc" data-f="date" value="${I.date}"></label>
+ <label>Bus<select data-chg="inc" data-f="tripId">${all.map(x=>`<option value="${esc(x.id)}" ${x.id===tr.id?'selected':''}>${x.op.id} ${x.bus} · ${x.time}${isOut(x)?' · report open':''} · ${affected(x).length} active passengers</option>`).join('')}</select></label>
+ <label>Type<select data-chg="inc" data-f="type"><option ${mech?'selected':''}>Mechanical</option><option ${mech?'':'selected'}>Accident</option></select></label>
+ <label>Where (nearest stop)<select data-chg="inc" data-f="stop">${STOPS.map((x,i)=>`<option value="${i}" ${i===I.stop?'selected':''}>${esc(x.n)}</option>`).join('')}</select></label></div>
+ <p class="mut" style="font-size:13px;margin:10px 0 0">${mech?'Mechanical problem: the bus is taken out of service and you can transfer passengers.':'Accident: the bus is closed to new bookings and every passenger on it is notified.'}</p>
+ <label style="margin-top:12px">What happened<textarea data-chg="inc" data-f="notes" rows="3" placeholder="Short description for the record and for passengers">${esc(I.notes||'')}</textarea></label>
+ ${mech?'':`<label class="chk" style="display:flex;gap:10px;align-items:center;margin-top:10px;text-transform:none;letter-spacing:normal"><input type="checkbox" data-chg="inc" data-f="injured" ${I.injured?'checked':''} style="width:auto;min-height:0">Anyone injured</label>`}
+ ${out?'<p class="note" style="margin-top:14px">This bus already has an open report. Close it in the list below before filing another.</p>':tf}
+ <button class="btn t" style="width:100%;margin-top:16px" data-act="incsend" ${out?'disabled':''}>${mech&&aff.length?'Send report and transfer offers':'Send report'}</button></div>
+ <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-top:28px"><h3 style="margin:0">Report history</h3><label style="min-width:200px">Show<select data-chg="incf"><option value="all" ${F==='all'?'selected':''}>All reports</option><option value="open" ${F==='open'?'selected':''}>Open only</option><option value="Accident" ${F==='Accident'?'selected':''}>Accidents</option><option value="Mechanical" ${F==='Mechanical'?'selected':''}>Mechanical problems</option></select></label></div>
+ <div class="list" style="margin-top:12px">${hist||'<div class="empty">No reports to show.</div>'}</div></div>`}
+document.addEventListener('change',e=>{if(e.target.dataset.chg==='incf'){UI.incF=e.target.value;rInci()}});
+/* ========= REPORTS: passenger "Report a problem" + operator inbox =========
+   IMPROVE: prototype only. In production store reports in the database, let passengers attach photos (private storage), rate-limit submissions,
+   send urgent reports to the operator by SMS/push as well as in-app, and give the office a proper case-management workflow with audit log.
+   Reports about crew or other passengers are sensitive: restrict who can read them and keep identity withheld when the passenger asks. */
+const RCATS={
+ emergency:{i:'🚨',l:'Accident or emergency',d:'Collision, fire, medical emergency or danger on board',bus:1,subs:['Accident or collision','Fire or smoke','Medical emergency','Threat or violence','Other danger']},
+ driver:{i:'🧑‍✈️',l:'Bus driver',d:'Unsafe driving or behaviour',bus:1,who:1,subs:['Reckless driving or speeding','Using a phone while driving','Seems drunk or unfit to drive','Rude or abusive','Skipped my stop','Not following the route','Other']},
+ conductor:{i:'🎫',l:'Bus conductor',d:'Fares, tickets, discounts or behaviour',bus:1,who:1,subs:['Overcharged or wrong fare','Refused my Student/Senior/PWD discount','Did not check my ticket','Rude or abusive','Harassment','Other']},
+ passenger:{i:'👥',l:'Another passenger',d:'Harassment, theft or disturbance',bus:1,who:1,subs:['Harassment','Theft','Fighting or disturbance','Drunk or aggressive','Smoking on board','Someone is using my seat','Loud music or noise','Other']},
+ bus:{i:'🚌',l:'Bus condition',d:'Seats, aircon, cleanliness, overcrowding',bus:1,subs:['Broken or dirty seat','Aircon not working','Bus is dirty','Overcrowded beyond seat count','Unsafe: door, lights or brakes','Other']},
+ lost:{i:'🎒',l:'Lost item',d:'Something I left on the bus',bus:1,subs:['Bag or luggage','Phone or electronics','Wallet or ID','Other item']},
+ fare:{i:'💳',l:'Fare or payment',d:'Charged twice, wrong amount or refund',bus:0,subs:['Charged twice','Wrong fare amount','Refund missing','Transit card problem','Other']},
+ other:{i:'💬',l:'Other or suggestion',d:'Anything else, including ideas to improve the service',bus:0,subs:['Suggestion','Compliment','Website or app problem','Other']}};
+const RSTAGES=['Submitted','Under review','Resolved'],ROPEN=r=>r.status==='Submitted'||r.status==='Under review';
+const rpNew=()=>({bk:'',cat:'',sub:'',desc:'',who:'',anon:false,now:false});
+function rpSync(){const I=UI.rp;if(!I)return;const g=id=>document.getElementById(id);
+ if(g('rp-bk'))I.bk=g('rp-bk').value;if(g('rp-sub'))I.sub=g('rp-sub').value;if(g('rp-desc'))I.desc=g('rp-desc').value;if(g('rp-who'))I.who=g('rp-who').value;if(g('rp-anon'))I.anon=g('rp-anon').checked;if(g('rp-now'))I.now=g('rp-now').checked}
+const tripLine=r=>{if(!r.tripId)return'Not about a specific trip';const t=tripById(r.tripId);return t?`${t.op.id} ${t.bus} · ${t.date} ${t.time}`:r.tripId};
+function rReport(){if(!UI.rp)UI.rp=rpNew();const I=UI.rp,C=RCATS[I.cat],mine=S.bookings.filter(b=>b.pax===S.pax).reverse(),reps=S.reports.filter(r=>r.pax===S.pax);
+ const tiles=Object.keys(RCATS).map(k=>{const c=RCATS[k],sel=I.cat===k;return`<button type="button" class="card" data-act="rptcat" data-c="${k}" aria-pressed="${sel}" style="display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:2px;text-align:left;cursor:pointer;color:var(--ink);font:inherit;padding:14px;border:2px solid ${sel?'var(--teal)':'var(--line)'};background:${sel?'var(--tealbg)':'var(--card)'}"><div style="font-size:1.4rem">${c.i}</div><b>${c.l}</b><div class="mut" style="font-size:12.5px">${c.d}</div></button>`}).join('');
+ const urgent=I.cat==='emergency'||I.now;
+ const form=C?`<div class="card" style="margin-top:16px"><h3>${C.i} ${C.l}</h3>
+  ${I.cat==='emergency'?'<p class="note">If you or anyone is in danger, call 911 first. This report goes to the bus operator; it does not call for help.</p>':''}
+  <div class="fgrid" style="margin-top:10px"><label>${C.bus?'Which trip is this about?':'Related trip (optional)'}<select id="rp-bk"><option value="">${C.bus?'Choose your booking…':'Not about a specific trip'}</option>${mine.map(b=>{const t=tripById(b.tripId);return`<option value="${b.id}" ${I.bk===b.id?'selected':''}>${esc(t.op.id)} ${t.bus} · ${t.date} ${t.time} · Seat ${b.seat} · ${esc(b.status)}</option>`}).join('')}</select></label>
+  <label>What is the problem?<select id="rp-sub"><option value="">Choose…</option>${C.subs.map(x=>`<option ${I.sub===x?'selected':''}>${esc(x)}</option>`).join('')}</select></label></div>
+  ${C.bus&&!mine.length?'<p class="note" style="margin-top:10px">You have no bookings yet. Reports about a bus, crew or passengers are linked to a trip you booked, so the operator can check the right bus.</p>':''}
+  ${C.who?`<label style="margin-top:12px">Who or where on the bus (optional)<input id="rp-who" maxlength="120" value="${esc(I.who)}" placeholder="e.g. driver in blue cap, or the passenger in seat 14"></label>`:''}
+  <label style="margin-top:12px">What happened<textarea id="rp-desc" rows="4" maxlength="1000" placeholder="Describe what happened, where and roughly when. Stick to facts.">${esc(I.desc)}</textarea></label>
+  <label class="chk" style="display:flex;gap:10px;align-items:center;margin-top:12px;text-transform:none;letter-spacing:normal;font-weight:500"><input type="checkbox" id="rp-now" ${I.now?'checked':''} style="width:auto;min-height:0">This is happening right now</label>
+  ${['driver','conductor','passenger'].includes(I.cat)?`<label class="chk" style="display:flex;gap:10px;align-items:flex-start;margin-top:10px;text-transform:none;letter-spacing:normal;font-weight:500"><input type="checkbox" id="rp-anon" ${I.anon?'checked':''} style="width:auto;min-height:0;margin-top:3px"><span>Do not share my name or seat number with the crew. The operator office still answers you through your notifications.</span></label>`:''}
+  ${urgent?'<p class="note" style="margin-top:12px">Marked urgent: the operator is alerted straight away.</p>':''}
+  <p class="mut" style="font-size:12.5px;margin:12px 0 0">Reports are read by the operator office. Please do not file false reports. Photo attachments need a server and are not in this prototype.</p>
+  <button class="btn t" style="width:100%;margin-top:12px" data-act="rptsend">Submit report</button></div>`:'<p class="mut" style="margin-top:14px">Choose a topic above to start your report.</p>';
+ const list=reps.map(r=>{const c=RCATS[r.cat],i=RSTAGES.indexOf(r.status),closed=r.status==='Dismissed'||r.status==='Withdrawn';
+  return`<article class="card"><div class="meta"><span class="badge ${r.urgent?'r':'o'}">${r.urgent?'Urgent':esc(c.l)}</span><b style="color:var(--ink)">${r.id}</b><span>${esc(c.l)}: ${esc(r.sub)}</span><span>${r.ts}</span></div>
+  <p style="margin:8px 0 2px">${esc(r.desc)}</p><p class="mut" style="margin:0;font-size:13px">${esc(tripLine(r))}${r.seat?' · Seat '+r.seat:''}${r.anon?' · name withheld from crew':''}</p>
+  ${closed?`<p style="margin:10px 0 0"><span class="badge r">${r.status}</span></p>`:`<div class="steps">${RSTAGES.map((x,k)=>`<span class="${k<=i?'on':''}">${x}</span>`).join('')}</div>`}
+  ${r.upd.length?`<div class="list" style="margin-top:8px">${r.upd.map(u=>`<div class="note" style="background:var(--bg);color:var(--ink);font-weight:500"><b>${esc(u.st)}</b> · ${u.ts}${u.text?'<br>'+esc(u.text):''}</div>`).join('')}</div>`:''}
+  ${r.status==='Submitted'?`<p style="margin:10px 0 0"><button class="btn g sm" data-act="rptwd" data-id="${r.id}">Withdraw report</button></p>`:''}</article>`}).join('');
+ app.innerHTML=`<div class="wrap sec"><h2>Report a problem</h2><p class="mut" style="max-width:70ch">Tell the operator about an accident, a problem with the driver or conductor, another passenger, or the bus itself. You get a reference number and can follow the answer here and in your notifications.</p>
+ <div class="grid" style="margin-top:14px;grid-template-columns:repeat(auto-fit,minmax(190px,1fr))">${tiles}</div>${form}
+ <h3 style="margin-top:28px">My reports</h3><div class="list">${list||'<div class="empty">You have not filed any reports.</div>'}</div></div>`}
+function rptSend(){if(S.pax==='OP')return;rpSync();const I=UI.rp,C=RCATS[I&&I.cat];
+ if(!C)return toast('Choose what you want to report.');
+ if(C.bus&&!I.bk)return toast('Choose the trip this is about.');
+ if(!I.sub)return toast('Choose the specific problem.');
+ if((I.desc||'').trim().length<10)return toast('Describe what happened (at least 10 characters).');
+ const b=I.bk?S.bookings.find(x=>x.id===I.bk&&x.pax===S.pax):null;if(I.bk&&!b)return toast('That booking was not found.');
+ const urgent=I.cat==='emergency'||!!I.now,id='RP'+nid(),r={id,pax:S.pax,name:who(),anon:!!I.anon,bk:b?b.id:null,tripId:b?b.tripId:null,seat:b?b.seat:null,cat:I.cat,sub:I.sub,who:(I.who||'').trim(),desc:I.desc.trim(),urgent,status:'Submitted',ts:stamp(),upd:[]};
+ S.reports.unshift(r);
+ note(r.pax,`Report ${id} received (${C.l}: ${r.sub}). The operator office will review it.${urgent?' It was marked urgent.':''} If anyone is in danger, call 911.`);
+ opNote(`${urgent?'🚨 URGENT ':'🚩 '}Passenger report ${id}: ${C.l} · ${r.sub}${b?` · ${tripLine(r)}`:''}`,'report');
+ logIt('Passenger report filed',id);UI.rp=null;render();scrollTo(0,0);toast('Report sent. Reference '+id)}
+function rptWithdraw(id){const r=S.reports.find(x=>x.id===id&&x.pax===S.pax);if(!r||r.status!=='Submitted')return;r.status='Withdrawn';r.upd.unshift({ts:stamp(),st:'Withdrawn',text:'You withdrew this report.'});opNote(`↩ Passenger withdrew report ${id}`,'report');render();toast('Report withdrawn.')}
+function rptSet(id,st){if(S.pax!=='OP')return;const r=S.reports.find(x=>x.id===id);if(!r||!ROPEN(r))return;const box=document.getElementById('rr-'+id),txt=box?box.value.trim():'';
+ if(st==='Dismissed'&&txt.length<3)return toast('Write a short reason before dismissing.');
+ r.status=st;r.upd.unshift({ts:stamp(),st,text:txt});
+ note(r.pax,`Report ${r.id} is now "${st}".${txt?' Operator: '+txt:st==='Under review'?' The operator is looking into it.':st==='Resolved'?' The operator marked it resolved.':''}`);
+ logIt('Report '+st.toLowerCase(),r.id);render();toast(`Report ${r.id}: ${st}`)}
+function rInbox(){const F=UI.rf||'open',K=UI.rk||'all',cnt=f=>S.reports.filter(f).length,
+ stat=(n,l,c)=>`<div class="card" style="padding:14px 16px;${c?'border-left:4px solid '+c:''}"><div style="font-size:1.7rem;font-weight:800;line-height:1.1">${n}</div><div class="mut" style="font-size:13px">${l}</div></div>`;
+ const list=S.reports.filter(r=>(F==='all'||(F==='open'?ROPEN(r):r.status===F))&&(K==='all'||r.cat===K)).sort((a,b)=>(ROPEN(b)&&b.urgent)-(ROPEN(a)&&a.urgent)||0);
+ const cards=list.map(r=>{const c=RCATS[r.cat],open=ROPEN(r),t=r.tripId&&tripById(r.tripId);
+  return`<article class="card" style="border-left:4px solid ${r.urgent&&open?'var(--red)':'var(--line)'}"><div class="meta">${r.urgent?'<span class="badge r">Urgent</span>':''}<span class="badge o">${c.i} ${esc(c.l)}</span><span class="badge ${r.status==='Resolved'?'g':open?'o':'r'}">${r.status}</span><b style="color:var(--ink)">${r.id}</b><span>${r.ts}</span></div>
+  <p style="margin:8px 0 2px"><b>${esc(r.sub)}</b></p><p style="margin:0 0 4px">${esc(r.desc)}</p>
+  <dl style="grid-template-columns:auto 1fr;font-size:13.5px"><dt>Trip</dt><dd>${esc(tripLine(r))}</dd><dt>Passenger</dt><dd>${r.anon?'Name withheld at the passenger’s request (answer with the reply box below)':esc(r.name)+(r.seat?' · Seat '+r.seat:'')}</dd>${r.who?`<dt>Involved</dt><dd>${esc(r.who)}</dd>`:''}</dl>
+  ${r.upd.length?`<div class="list" style="margin-bottom:8px">${r.upd.map(u=>`<div class="note" style="background:var(--bg);color:var(--ink);font-weight:500"><b>${esc(u.st)}</b> · ${u.ts}${u.text?'<br>'+esc(u.text):''}</div>`).join('')}</div>`:''}
+  ${open?`<label>Reply to the passenger<textarea id="rr-${r.id}" rows="2" placeholder="Shown in the passenger’s notifications. Required to dismiss."></textarea></label>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">${r.status==='Submitted'?`<button class="btn sm" data-act="rptset" data-id="${r.id}" data-st="Under review">Mark under review</button>`:''}<button class="btn t sm" data-act="rptset" data-id="${r.id}" data-st="Resolved">Resolve</button><button class="btn g sm" data-act="rptset" data-id="${r.id}" data-st="Dismissed">Dismiss</button>${t?`<button class="btn r sm" data-act="rptinc" data-id="${esc(r.tripId)}">File incident for this bus</button>`:''}</div>`:''}</article>`}).join('');
+ app.innerHTML=`<div class="wrap sec"><h2>Passenger reports</h2><p class="mut" style="max-width:70ch">Reports from passengers about accidents, the crew, other passengers and the bus. Urgent reports are listed first. Your reply is sent to the passenger as a notification.</p>
+ <div class="grid" style="margin:14px 0 18px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">${stat(cnt(r=>r.status==='Submitted'),'New','var(--org)')}${stat(cnt(r=>r.status==='Under review'),'Under review')}${stat(cnt(r=>r.urgent&&ROPEN(r)),'Urgent open','var(--red)')}${stat(cnt(r=>r.status==='Resolved'),'Resolved','var(--teal)')}</div>
+ <div class="fgrid" style="max-width:560px"><label>Status<select data-chg="rf">${[['open','Open (new and under review)'],['all','All'],['Resolved','Resolved'],['Dismissed','Dismissed'],['Withdrawn','Withdrawn']].map(([v,l])=>`<option value="${v}" ${F===v?'selected':''}>${l}</option>`).join('')}</select></label>
+ <label>Topic<select data-chg="rk"><option value="all">All topics</option>${Object.keys(RCATS).map(k=>`<option value="${k}" ${K===k?'selected':''}>${RCATS[k].l}</option>`).join('')}</select></label></div>
+ <div class="list" style="margin-top:14px">${cards||'<div class="empty">No reports match.</div>'}</div></div>`}
+document.addEventListener('change',e=>{const k=e.target.dataset.chg;if(k==='rf'){UI.rf=e.target.value;rInbox()}if(k==='rk'){UI.rk=e.target.value;rInbox()}});
+function incSend(){const I=UI.inc;if(!I||S.pax!=='OP')return;const tr=tripById(I.tripId),mech=I.type==='Mechanical',aff=mech?affected(tr):[],notes=(I.notes||'').trim();
+ if(notes.length<3)return toast('Describe what happened first.');
+ let to=null;if(mech&&aff.length){to=I.toTrip&&tripById(I.toTrip);if(!to)return toast('Choose the replacement bus.');if(to.time<tr.time)return toast('That bus left before the broken bus and cannot pick up passengers. Choose a later bus.');
+  for(const b of aff){const s=I.assign[b.id];if(!s||!seatOkFor(to,s,b,I.assign,aff))return toast(`Choose a free seat for ${b.name} on ${to.bus}.`)}}
+ const id='INC'+nid(),label=`${tr.op.id} ${tr.bus} (${tr.time})`,where=`near ${STOPS[I.stop].n}`,inc={id,type:I.type,tripId:tr.id,stop:I.stop,notes,injured:!!I.injured,ts:stamp(),toTrip:to?to.id:null,xf:[]};
+ S.incidents.unshift(inc);inc.notified=mech?aff.length:S.bookings.filter(b=>b.tripId===tr.id&&['Booked','Checked in'].includes(b.status)).length;S.flags[tr.id]={type:I.type,inc:id,ts:stamp()};
+ if(mech){aff.forEach(b=>{const seat=I.assign[b.id];b.xfer={inc:id,from:tr.id,fromSeat:b.seat,toTrip:to.id,toSeat:seat,status:'Offered',exp:Date.now()+OFFER_MIN*60000};inc.xf.push({bk:b.id,name:b.name,seat:b.seat,toSeat:seat,status:'Offered'});
+   note(b.pax,`🔧 Your bus ${label} has a mechanical problem ${where}. Transfer offered: ${to.op.id} ${to.bus} at ${to.time}, Seat ${seat}. Your payment moves with you. Accept or decline in My Bookings within ${OFFER_MIN} minutes.`)})}
+ else S.bookings.filter(b=>b.tripId===tr.id&&['Booked','Checked in'].includes(b.status)).forEach(b=>note(b.pax,`🚨 An incident was reported on your bus ${label} ${where}. Please follow the crew's instructions. The operator will update you.`));
+ opNote(`🚨 ${I.type} reported on ${label} ${where}${aff.length&&mech?` · ${aff.length} transfer offer${aff.length>1?'s':''} sent`:''}`,'incident');
+ logIt(`${I.type} reported`,`${id} ${tr.bus}`);UI.inc=null;dlg.close();render();toast('Report sent. Passengers were notified.')}
+function offerBox(b){const x=b.xfer,to=tripById(x.toTrip),mins=Math.max(0,Math.ceil((x.exp-Date.now())/60000));
+ return`<div class="note" style="margin:10px 0">🔧 Your bus has a mechanical problem. Transfer offered: <b>${esc(to.op.id)} ${to.bus}</b> · ${to.date} ${to.time} · <b>Seat ${x.toSeat}</b> (${layoutOf(to).name}). Your payment carries over. Please answer within ${mins} min.<div style="display:flex;gap:8px;margin-top:8px"><button class="btn t sm" data-act="xferyes" data-id="${b.id}">Accept transfer</button><button class="btn g sm" data-act="xferno" data-id="${b.id}">Decline</button></div></div>`}
+function xferAccept(id){const b=S.bookings.find(x=>x.id===id&&x.pax===S.pax);if(!b||!b.xfer||b.xfer.status!=='Offered')return;
+ if(b.xfer.exp<=Date.now()){expireOffers();render();return toast('This offer expired. Your booking was ended.')}
+ const x=b.xfer,to=tripById(x.toTrip),from=tripById(x.from),inc=S.incidents.find(i=>i.id===x.inc),r=inc&&inc.xf.find(q=>q.bk===b.id);if(r)r.status='Accepted';
+ b.tripId=to.id;b.seat=x.toSeat;b.movedFrom={trip:from.id,seat:x.fromSeat};delete b.xfer;delete b.exit;
+ const t=b.txRef&&S.txs.find(y=>y.ref===b.txRef);if(t)t.desc+=` (transferred to ${to.bus})`;
+ note(b.pax,`✅ Transfer accepted. You are now on ${to.op.id} ${to.bus} at ${to.time}, Seat ${b.seat}. ${b.pay==='Paid'?'Your payment carried over; nothing more to pay.':'You can pay in My Bookings to check in.'}`);
+ opNote(`✅ ${b.name} accepted the transfer · now Seat ${b.seat} on ${to.bus} (was Seat ${x.fromSeat} on ${from.bus})`,'transfer');logIt('Transfer accepted',b.id);render();toast('Transfer accepted.')}
+function xferDecline(b,why){const x=b.xfer,to=tripById(x.toTrip),inc=S.incidents.find(i=>i.id===x.inc),r=inc&&inc.xf.find(q=>q.bk===b.id);if(r)r.status=why==='declined'?'Declined':'No response';
+ const paid=b.pay==='Paid';
+ if(paid){const c=S.cards[b.card];if(c)c.bal=Math.round((c.bal+b.fare)*100)/100;const t=S.txs.find(y=>y.ref===b.txRef);if(t)t.status='Refunded';S.txs.unshift({ref:'TX-'+(100000+nid()),card:b.card,amt:b.fare,status:'Refunded',type:'refund',ts:stamp(),desc:`Refund ${b.id} (bus transfer not accepted)`})}
+ S.bookings=S.bookings.filter(y=>y!==b);
+ note(b.pax,`Transfer ${why}. Booking ${b.id} ended${paid?` and ${peso(b.fare)} was returned to your transit card`:''}.`);
+ opNote(`❌ ${b.name} ${why} the transfer · Seat ${x.toSeat} on ${to.bus} is available again`,'transfer');logIt('Transfer not accepted',b.id)}
+function expireOffers(){let ch=false;for(const b of [...S.bookings])if(b.xfer&&b.xfer.status==='Offered'&&b.xfer.exp<=Date.now()){xferDecline(b,'expired (no answer)');ch=true}return ch}
+setInterval(()=>{if(expireOffers()){save();if(!dlg.open)render()}},15000);
 /* ========= ACTIONS ========= */
 const ACT={
  nav:d=>{S.view=d.v;render();scrollTo(0,0)},
  open:d=>{UI.trip=d.id;UI.seat=null;rSeat()},
  seat:d=>{if(S.pax==='OP')return toast('Switch to a passenger account to reserve a seat.');const tr=tripById(UI.trip),s=+d.s,st=seatState(tr,s,UI.f,UI.t);
+  if(s===DRIVER)return toast('Seat 1 is the driver seat and cannot be booked.');
   if(st==='pending'){if(!S.watch.find(w=>w.pax===S.pax&&w.tripId===tr.id&&w.seat===s))S.watch.push({pax:S.pax,tripId:tr.id,seat:s,from:UI.f});save();toast(`Seat ${s} is awaiting exit confirmation. We will notify you when it is ready.`);return}
   for(const k in S.holds)if(S.holds[k].pax===S.pax)delete S.holds[k];
   if(UI.seat===s){UI.seat=null}else{S.holds[hk(tr,s)]={pax:S.pax,exp:Date.now()+HOLD_SEC*1000};UI.seat=s}save();rSeat();dlg.querySelector(`[data-s="${s}"]`)?.focus({preventScroll:true})},
@@ -492,41 +702,147 @@ const ACT={
  vscan:()=>camScan(validateTicket),vcode:()=>validateTicket($('#tc').value),
  link:()=>registerCard($('#lc').value),
  usecard:()=>{const v=norm($('#cn').value);if(!S.cards[v]){return toast('Card not found. Demo cards: 4500 1234 0001 / 0002.')}if(S.cards[v].owner!==S.pax)return toast('That card is linked to another passenger.');UI.card=v;rSeat()},
- pay,close:()=>dlg.close(),email:()=>toast('Email receipts need an email service. Placeholder only.'),
+ book,close:()=>dlg.close(),email:()=>toast('Email receipts need an email service. Placeholder only.'),
  rcpt:d=>showReceipt(d.id),
- cancel:d=>{const b=S.bookings.find(x=>x.id===d.id);if(b.status!=='Confirmed')return toast('Only unboarded bookings can be cancelled.');b.status='Cancelled';const c=S.cards[b.card];c.bal=Math.round((c.bal+b.fare)*100)/100;
-  const o=S.txs.find(x=>x.ref===b.txRef);o.status='Refunded';S.txs.unshift({ref:'TX-'+(100000+nid()),card:b.card,amt:b.fare,status:'Refunded',type:'refund',ts:stamp(),desc:'Refund '+b.id});note(b.pax,`Booking ${b.id} cancelled. ${peso(b.fare)} refunded.`);logIt('Cancelled and refunded',b.id);render();toast('Booking cancelled and fare refunded.')},
- selfexit:d=>{setStatus(S.bookings.find(x=>x.id===d.id),'Alighted');render();toast('Exit confirmed. Seat released.')},
- adv:d=>{const b=S.bookings.find(x=>x.id===d.id);setStatus(b,ADV[ADV.indexOf(b.status)+1]);render()},
- exit:d=>{setStatus(S.bookings.find(x=>x.id===d.id),'Alighted');render();toast('Exit confirmed by staff. Seat handed over.')},
- tapme:d=>tapBoard(S.bookings.find(x=>x.id===d.id).card),tapdemo:()=>tapBoard($('#tapc').value),
- tapnfc:async()=>{if(!('NDEFReader' in window))return toast('NFC needs Chrome on Android. Use Simulate tap.');try{const r=new NDEFReader();await r.scan();toast('Tap the passenger card on this phone.');r.onreading=e=>tapBoard(norm(e.serialNumber))}catch(e){toast('NFC permission denied.')}},
- play:()=>{if(PLAY){clearInterval(PLAY);PLAY=null;$('#playb').textContent='Play demo';return}$('#playb').textContent='Pause';
-  PLAY=setInterval(()=>{if(!$('#map')){clearInterval(PLAY);PLAY=null;return}UI.prog=Math.min(1,UI.prog+.004);$('#prog').value=UI.prog*1000;moveBus();if(UI.prog>=1){clearInterval(PLAY);PLAY=null;$('#playb').textContent='Play demo'}},200)},
- gps:()=>{if(!navigator.geolocation)return toast('GPS is not available on this device.');if(GPSW!=null){navigator.geolocation.clearWatch(GPSW);GPSW=null;return toast('GPS sharing stopped.')}
-  const id=UI.opTrip;if(!id)return toast('Select a trip first.');UI.trk=id;
-  GPSW=navigator.geolocation.watchPosition(q=>{S.gps=S.gps||{};S.gps[id]={lat:q.coords.latitude,lng:q.coords.longitude,ts:Date.now()};save()},err=>{if(err.code===1){navigator.geolocation.clearWatch(GPSW);GPSW=null;toast('Location permission denied.')}},{enableHighAccuracy:true});toast('Sharing GPS for this trip. Open Track Bus to see it.')},
- delay:()=>{const tr=tripById(UI.opTrip);S.bookings.filter(b=>b.tripId===tr.id&&!['Alighted','Cancelled'].includes(b.status)).forEach(b=>note(b.pax,`${tr.op.id} ${tr.bus} is delayed by about 10 minutes.`));logIt('Delay reported',tr.bus);render();toast('Delay reported to passengers.')},
+ cancel:d=>{const i=S.bookings.findIndex(x=>x.id===d.id&&x.pax===S.pax);if(i<0)return;const b=S.bookings[i];if(b.status!=='Booked')return toast('Only unpaid bookings can be cancelled.');if(b.xfer)return toast('Respond to the transfer offer first.');S.bookings.splice(i,1);logIt('Booking cancelled',b.id);render();toast('Booking cancelled. Seat released.')},
+ paybk:d=>payBooking(d.id),
+ incopen:()=>{if(S.pax!=='OP'||!UI.opTrip)return;UI.inc=incNew(UI.opTrip);UI.inc.stop=Math.max(0,+(UI.opStop==null?-1:UI.opStop));S.view='incidents';render();scrollTo(0,0)},
+ incsend:()=>incSend(),
+ rptbus:d=>{const b=S.bookings.find(x=>x.id===d.id&&x.pax===S.pax);if(!b)return;UI.rp=rpNew();UI.rp.bk=b.id;S.view='report';render();scrollTo(0,0)},
+ rptcat:d=>{rpSync();if(!UI.rp)UI.rp=rpNew();UI.rp.cat=d.c;UI.rp.sub='';rReport()},
+ rptsend:()=>rptSend(),rptwd:d=>rptWithdraw(d.id),rptset:d=>rptSet(d.id,d.st),
+ rptinc:d=>{if(S.pax!=='OP')return;UI.inc=incNew(d.id);UI.inc.type='Accident';S.view='incidents';render();scrollTo(0,0)},
+ reopen:d=>{if(S.pax!=='OP')return;const tr=tripById(d.id);if(S.bookings.some(b=>b.xfer&&b.xfer.from===tr.id))return toast('Transfer offers are still waiting for an answer.');{const ri=S.incidents.find(i=>i.id===(S.flags[tr.id]||{}).inc);if(ri)ri.closed=stamp()}delete S.flags[tr.id];logIt('Bus reopened for booking',tr.bus);render();toast('Bus reopened for booking.')},
+ xferyes:d=>xferAccept(d.id),
+ xferno:d=>{const b=S.bookings.find(x=>x.id===d.id&&x.pax===S.pax);if(!b||!b.xfer)return;if(!confirm('Decline the transfer? Your booking on this trip will end, the seats are released, and any fare you paid goes back to your transit card.'))return;xferDecline(b,'declined');render();toast('Transfer declined. Booking ended.')},
+ gettingoff:d=>{const b=S.bookings.find(x=>x.id===d.id&&x.pax===S.pax);if(!b||b.status!=='Checked in'||b.exit||b.xfer)return;b.exit=stamp();const tr=tripById(b.tripId);opNote(`🚪 ${b.name} is getting off · Seat ${b.seat} · at ${STOPS[b.to].n} (${tr.op.id} ${tr.time})`,'out');note(b.pax,'The operator was told you are getting off.');render();toast('Operator notified.')},
+ done:d=>{if(S.pax!=='OP')return;const b=S.bookings.find(x=>x.id===d.id);if(!b||b.status!=='Checked in'||b.xfer)return;const tr=tripById(b.tripId);b.status='Completed';b.doneAt=stamp();note(b.pax,`Trip completed. Thank you for riding ${tr.op.id}.`);logIt('Completed',`${b.id} seat ${b.seat}`);
+  S.watch=S.watch.filter(w=>{if(w.tripId===b.tripId&&w.seat===b.seat&&w.from>=b.to){note(w.pax,`Seat ${w.seat} is ready for you on ${tr.op.id} from ${STOPS[w.from].n}. Book it now.`);return false}return true});render();toast(`Seat ${b.seat} completed and released.`)},
+ delay:()=>{const tr=tripById(UI.opTrip);S.bookings.filter(b=>b.tripId===tr.id&&b.status!=='Completed').forEach(b=>note(b.pax,`${tr.op.id} ${tr.bus} is delayed by about 10 minutes.`));logIt('Delay reported',tr.bus);render();toast('Delay reported to passengers.')},
  topup:d=>{const n=PAX[S.pax].card;S.cards[n].bal+=+d.a;S.txs.unshift({ref:'TX-'+(100000+nid()),card:n,amt:+d.a,status:'Successful',type:'topup',ts:stamp(),desc:'Top-up (simulated)'});render();toast('Top-up added (simulated).')},
  block:()=>{if(!confirm('Block this card? You cannot undo this in the demo.'))return;S.cards[PAX[S.pax].card].status='Blocked';logIt('Card blocked',mask(PAX[S.pax].card));render()},
  company:d=>{UI.op=d.o;S.view='find';render();scrollTo(0,0)},
- bell:()=>{S.view='trips';render();scrollTo(0,0)},
+ bell:()=>{if(S.pax==='OP')return opBell();S.view='trips';render();scrollTo(0,0)},
  reset:()=>{if(!confirm('Reset all demo data?'))return;S=fresh();PAX.A.card='450012340001';PAX.B.card='450012340002';Object.assign(UI,{seat:null,card:null,trip:null,opTrip:null});if(dlg.open)dlg.close();render();toast('Demo reset.')}};
 document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(b){if(b.tagName==='A')e.preventDefault();ACT[b.dataset.act]?.(b.dataset)}});
-document.addEventListener('change',e=>{const k=e.target.dataset.chg;if(!k)return;if(k==='cat'){UI.cat=e.target.value;rSeat()}if(k==='opTrip'){UI.opTrip=e.target.value;rOps()}if(k==='trk'){UI.trk=e.target.value;rTrack()}});
+document.addEventListener('change',e=>{const k=e.target.dataset.chg;if(!k)return;if(k==='cat'){UI.cat=e.target.value;rSeat()}if(k==='opTrip'){UI.opTrip=e.target.value;rOps()}if(k==='opDate'){UI.opDate=e.target.value||today();UI.opTrip=null;rOps()}if(k==='opStop'){UI.opStop=+e.target.value;rOps()}if(k==='inc')incSet(e.target.dataset.f,e.target.type==='checkbox'?e.target.checked:e.target.value);if(k==='incseat'&&UI.inc)UI.inc.assign[e.target.dataset.id]=+e.target.value||null;if(k==='trk'){UI.trk=e.target.value;rTrack()}});
 document.addEventListener('input',e=>{if(e.target.id==='prog'){UI.prog=e.target.value/1000;moveBus();return}if(e.target.dataset.inp==='q'){UI.q=e.target.value;const p=e.target.selectionStart;rRoutes();const q=$('#q');q.focus();q.setSelectionRange(p,p)}});
 document.addEventListener('submit',e=>{if(e.target.id!=='sf')return;e.preventDefault();const f=+$('#sf-f').value,t=+$('#sf-t').value;
  if(t<=f)return $('#sf-msg').textContent='Choose a destination that comes after your boarding stop.';
  if(!$('#sf-d').value||$('#sf-d').value<today())return $('#sf-msg').textContent='Choose today or a later date.';
  Object.assign(UI,{f,t,date:$('#sf-d').value,time:$('#sf-h').value,op:$('#sf-o').value});res()});
 document.addEventListener('change',e=>{if(e.target.id==='sf-f'){UI.t=+$('#sf-t').value;UI.f=+e.target.value;UI.t=Math.max(UI.t,UI.f+1);const d=$('#sf-d').value;if(d&&d>=today())UI.date=d;UI.time=$('#sf-h').value;UI.op=$('#sf-o').value;rFind()}});
-$('#role').addEventListener('change',e=>{for(const k in S.holds)if(S.holds[k].pax===S.pax)delete S.holds[k];S.pax=e.target.value;UI.card=null;UI.seat=null;if(dlg.open)dlg.close();render()});
+$('#role').addEventListener('change',e=>{for(const k in S.holds)if(S.holds[k].pax===S.pax)delete S.holds[k];S.pax=e.target.value;if(S.pax==='OP')S.view='ops';UI.card=null;UI.seat=null;if(dlg.open)dlg.close();render()});
 dlg.addEventListener('close',()=>{if(UI.mode==='seat'){for(const k in S.holds)if(S.holds[k].pax===S.pax)delete S.holds[k];UI.seat=null;save();if(S.view==='find')res()}UI.mode=''});
 /* seat-hold countdown: expired holds are released automatically */
 setInterval(()=>{if(!dlg.open||UI.mode!=='seat')return;sweep();const h=$('#hold');if(UI.seat&&!S.holds[hk(tripById(UI.trip),UI.seat)]){UI.seat=null;toast('Seat hold expired and was released.');rSeat()}else if(h){const x=S.holds[hk(tripById(UI.trip),UI.seat)];h.textContent=Math.max(0,Math.round((x.exp-Date.now())/1000))}},1000);
 addEventListener('storage',e=>{if(e.key===KEY&&e.newValue&&$('#trkinfo')){try{S=JSON.parse(e.newValue);moveBus()}catch(x){}}});setInterval(()=>{if($('#trkinfo')&&!PLAY)moveBus()},5000);
 S.view=['find','routes','track','trips','card','ops'].includes(location.hash.slice(1))?location.hash.slice(1):S.view;render();
 addEventListener('hashchange',()=>{const v=location.hash.slice(1);if(Object.hasOwn(VIEWS,v)&&v!==S.view){S.view=v;render();scrollTo(0,0)}});
+</script>
+<!-- Pinned Supabase client. IMPROVE: self-host or add an integrity hash for production. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+'use strict';
+/* ========= ACCOUNTS: real sign-up / sign-in through Supabase Auth =========
+   SETUP (nothing below works until this is done):
+   1) Create a Supabase project.  2) Authentication > Providers > Email: turn ON "Confirm email".
+   3) Authentication > URL Configuration: add this site's address to Site URL and Redirect URLs.
+   4) Run db/migrations/001_core_schema.sql, then 002_profile_trigger.sql. To give a verified staff member operator access, run db/ops/grant_operator_role.sql for their user.
+   5) Paste the Project URL and the PUBLIC anon key below. NEVER paste the service_role key into this file.
+   Passwords, email verification, sessions and auth rate limits are handled by Supabase, not by this page. */
+const SUPABASE_URL='';       // e.g. https://abcdxyz.supabase.co
+const SUPABASE_ANON_KEY='';  // public anon key only
+const sb=(SUPABASE_URL&&SUPABASE_ANON_KEY&&window.supabase)?window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY):null;
+let SESSION=null,PENDING_VIEW=null,NOVERIFY=false,ROLE=null;
+const ad=document.getElementById('authdlg'),acct=document.getElementById('acct');
+const TITLES={signin:'Sign in',signup:'Create your account',forgot:'Reset your password',reset:'Choose a new password',verify:'Check your email',off:'Accounts are not set up yet'};
+const phone=v=>{const d=String(v).replace(/[\s\-()]/g,''),m=/^(?:\+63|63|0)(9\d{9})$/.exec(d);return m?'+63'+m[1]:null};
+const mailOk=v=>/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);
+const fld=(l,n,t,ex)=>`<label>${l}<input name="${n}" type="${t}" ${ex||''} required></label>`;
+const sub=l=>`<p id="aerr" class="aerr" role="alert"></p><button class="btn t" type="submit" id="asub" data-label="${l}" style="width:100%">${l}</button>`;
+function authBody(mode,msg){
+ if(mode==='off')return `${SUPABASE_URL&&!window.supabase?'<p class="note">The Supabase library could not be loaded. Check your connection.</p>':''}<p>Real accounts are not switched on in this copy of the site, so nothing can be created or signed in yet.</p><p class="mut" style="font-size:13px">To turn them on: create a Supabase project, enable "Confirm email", run the SQL files in <code>db/migrations</code>, then put the project URL and public anon key in <code>SUPABASE_URL</code> and <code>SUPABASE_ANON_KEY</code> near the end of this HTML file.</p>`;
+ if(mode==='verify')return `<p>${msg}</p><p class="mut" style="font-size:13px">Open the link in the email, then sign in. Check your spam folder if you do not see it.</p><button class="btn t" type="button" data-auth="signin" style="margin-top:8px">Go to sign in</button>`;
+ if(mode==='signup')return `<form id="af" novalidate>${fld('Full name','name','text','autocomplete="name" maxlength="120"')}${fld('Email','email','email','autocomplete="email"')}${fld('Mobile number (Philippines)','mobile','tel','autocomplete="tel" placeholder="0917 123 4567" inputmode="tel"')}${fld('Password (10+ characters)','pw','password','autocomplete="new-password"')}${fld('Confirm password','pw2','password','autocomplete="new-password"')}
+ <label class="chk"><input type="checkbox" name="terms"><span>I have read and accept the <button class="lnk" type="button" data-doc="Terms and Conditions">Terms and Conditions</button> and <button class="lnk" type="button" data-doc="Privacy Policy">Privacy Policy</button>.</span></label>${sub('Create account')}</form><p class="alinks">Already have an account? <button class="lnk" type="button" data-auth="signin">Sign in</button></p>`;
+ if(mode==='forgot')return `<form id="af" novalidate>${fld('Email','email','email','autocomplete="email"')}${sub('Send reset link')}</form><p class="alinks"><button class="lnk" type="button" data-auth="signin">Back to sign in</button></p>`;
+ if(mode==='reset')return `<form id="af" novalidate>${fld('New password (10+ characters)','pw','password','autocomplete="new-password"')}${fld('Confirm new password','pw2','password','autocomplete="new-password"')}${sub('Update password')}</form>`;
+ return `<form id="af" novalidate>${fld('Email','email','email','autocomplete="email"')}${fld('Password','pw','password','autocomplete="current-password"')}${sub('Sign in')}</form><p class="alinks"><button class="lnk" type="button" data-auth="forgot">Forgot password?</button> · <button class="lnk" type="button" data-auth="signup">Create an account</button></p>`}
+function showAuth(mode,msg){const m=sb?mode:'off';ad.dataset.mode=m;
+ ad.innerHTML=`<div class="dh"><h3 style="margin:0">${TITLES[m]}</h3><button class="btn g sm" type="button" data-act="authclose">Close</button></div><div class="db">${msg&&m!=='verify'?`<p class="note">${esc(msg)}</p>`:''}${authBody(m,msg)}</div>`;
+ if(!ad.open)ad.showModal();const f=ad.querySelector('input');if(f)f.focus()}
+function renderAcct(){if(!acct)return;
+ if(SESSION){const n=window.AUTH_NAME||'Account',op=ROLE==='operator_staff'||ROLE==='admin';
+  acct.innerHTML=`<b title="${esc(n)}">${esc(n)}</b>${op?`<button class="btn t sm" type="button" data-act="opview">${S.pax==='OP'?'Passenger view':'Operator view'}</button>`:''}<button class="btn sm" type="button" data-act="authout">Sign out</button>`}
+ else acct.innerHTML=`<button class="btn sm" type="button" data-auth="signin">Sign in</button><button class="btn t sm" type="button" data-auth="signup">Create account</button>`}
+/* Operator access comes from profiles.role in the database (set manually: db/ops/grant_operator_role.sql). Nobody can pick it themselves.
+   IMPROVE: this only decides which screens are shown. Once trips and reservations live in the database, operator data must be restricted by Row Level Security / server checks too. */
+async function loadRole(){ROLE=null;if(sb&&SESSION){const{data,error}=await sb.from('profiles').select('role').eq('id',SESSION.user.id).maybeSingle();if(!error&&data)ROLE=data.role}
+ if(ROLE!=='operator_staff'&&ROLE!=='admin'&&S.pax==='OP'){S.pax='A';if(S.view==='ops')S.view='find';render()}
+ renderAcct()}
+function applySession(s){SESSION=s||null;if(!SESSION)ROLE=null;const u=SESSION&&SESSION.user;window.AUTH_NAME=u?((u.user_metadata&&u.user_metadata.full_name)||u.email):null;renderAcct()}
+function afterLogin(view){
+ if(NOVERIFY){NOVERIFY=false;toast('Warning: email verification is OFF in your Supabase project. Turn on "Confirm email" before launch.')}
+ if(view){S.view=view;render();scrollTo(0,0)}else if(dlg.open&&UI.mode==='seat')rSeat()}
+function afterLogout(){S.pax='A';ROLE=null;renderAcct();UI.card=null;UI.seat=null;if(dlg.open)dlg.close();if(S.view==='trips'||S.view==='card'||S.view==='report')S.view='find';render()}
+/* Clicks: capture phase so the booking code never runs for a signed-out visitor. Browsing routes/fares stays open to everyone. */
+document.addEventListener('click',e=>{const t=e.target.closest('[data-auth],[data-act],[data-doc]');if(!t)return;
+ if(t.dataset.auth){e.preventDefault();showAuth(t.dataset.auth);return}
+ if(t.dataset.doc){const x=document.getElementById('aerr');if(x)x.textContent=t.dataset.doc+' is not published yet. It must be written and legally reviewed (including Data Privacy Act requirements) before launch.';return}
+ const a=t.dataset.act;
+ if(a==='authclose'){ad.close();return}
+ if(a==='authout'){if(sb)sb.auth.signOut();return}
+ if(a==='opview'){if(ROLE!=='operator_staff'&&ROLE!=='admin')return;for(const k in S.holds)if(S.holds[k].pax===S.pax)delete S.holds[k];S.pax=S.pax==='OP'?'A':'OP';UI.card=null;UI.seat=null;if(dlg.open)dlg.close();S.view=S.pax==='OP'?'ops':'find';render();renderAcct();return}
+ if(!sb||SESSION)return;
+ if(a==='book'){e.stopImmediatePropagation();e.preventDefault();showAuth('signin','Sign in or create an account to book this seat. Your seat choice stays on screen, but the hold is short, so it may expire.');return}
+ if(a==='nav'&&(t.dataset.v==='trips'||t.dataset.v==='card'||t.dataset.v==='report')){e.stopImmediatePropagation();e.preventDefault();PENDING_VIEW=t.dataset.v;showAuth('signin','Sign in to see your bookings.')}
+},true);
+ad.addEventListener('close',()=>{PENDING_VIEW=null});
+document.addEventListener('submit',async e=>{const f=e.target;if(f.id!=='af')return;e.preventDefault();if(!sb)return;
+ const mode=ad.dataset.mode,v=Object.fromEntries(new FormData(f)),err=t=>{document.getElementById('aerr').textContent=t},btn=document.getElementById('asub'),email=(v.email||'').trim().toLowerCase(),limit='Too many attempts. Please wait a few minutes and try again.';
+ err('');
+ try{
+  if(mode==='signup'){const name=(v.name||'').trim(),mob=phone(v.mobile||'');
+   if(name.length<2)return err('Enter your full name.');
+   if(!mailOk(email))return err('Enter a valid email address.');
+   if(!mob)return err('Enter a valid Philippine mobile number, for example 0917 123 4567.');
+   if((v.pw||'').length<10)return err('Use a password of at least 10 characters.');
+   if(v.pw!==v.pw2)return err('The two passwords do not match.');
+   if(!v.terms)return err('You must accept the Terms and Privacy Policy to create an account.');
+   btn.disabled=true;btn.textContent='Please wait…';
+   const{data,error}=await sb.auth.signUp({email,password:v.pw,options:{emailRedirectTo:location.origin+location.pathname,data:{full_name:name,mobile_ph:mob,terms_accepted:true}}});
+   if(error)return err(error.status===429?limit:'We could not create the account: '+error.message);
+   if(data.session){NOVERIFY=true;return}
+   return showAuth('verify','We sent a verification link to <b>'+esc(email)+'</b>.')}
+  if(mode==='signin'){if(!mailOk(email)||!v.pw)return err('Enter your email and password.');
+   btn.disabled=true;btn.textContent='Please wait…';
+   const{error}=await sb.auth.signInWithPassword({email,password:v.pw});
+   if(error)return err(error.status===429?limit:/not confirmed/i.test(error.message)?'Please verify your email first. Check your inbox for the verification link.':'Incorrect email or password.');
+   return}
+  if(mode==='forgot'){if(!mailOk(email))return err('Enter a valid email address.');
+   btn.disabled=true;btn.textContent='Please wait…';
+   const{error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
+   if(error&&error.status===429)return err(limit);
+   return showAuth('verify','If an account exists for <b>'+esc(email)+'</b>, we sent a password reset link.')}
+  if(mode==='reset'){if((v.pw||'').length<10)return err('Use a password of at least 10 characters.');
+   if(v.pw!==v.pw2)return err('The two passwords do not match.');
+   btn.disabled=true;btn.textContent='Please wait…';
+   const{error}=await sb.auth.updateUser({password:v.pw});
+   if(error)return err('Could not update the password: '+error.message);
+   ad.close();toast('Password updated.')}
+ }finally{if(btn&&btn.isConnected){btn.disabled=false;btn.textContent=btn.dataset.label}}
+});
+renderAcct();
+if(sb){
+ const r=document.getElementById('role');if(r)r.style.display='none'; // demo user/operator switcher is not allowed once real accounts are on
+ S.pax='A';save();                                                      // operator tools stay unreachable until real operator accounts exist
+ sb.auth.onAuthStateChange((evt,s)=>{applySession(s);if(s)setTimeout(loadRole,0);
+  if(evt==='PASSWORD_RECOVERY'){setTimeout(()=>showAuth('reset'),0);return}
+  if(evt==='SIGNED_IN'&&s&&ad.open&&ad.dataset.mode!=='reset'&&ad.dataset.mode!=='off'){const v=PENDING_VIEW;PENDING_VIEW=null;setTimeout(()=>{ad.close();afterLogin(v)},0)}
+  if(evt==='SIGNED_OUT')setTimeout(afterLogout,0)});
+ render();
+}
 </script>
 </body>
 </html>
