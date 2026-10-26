@@ -4,6 +4,22 @@
 <meta charset="utf-8">
 <meta name="theme-color" content="#0b1f4a">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!--
+IMPROVEMENT NOTES (added review comments; no behavior was changed in this file)
+Search "IMPROVE:" to find each note. Summary of priorities:
+ 1. Replace localStorage with a real backend + database (accounts, trips, seats, payments, tickets).
+ 2. Replace the fake transit-card payment with a Philippine payment gateway (sandbox first).
+ 3. Sign tickets on the server; stop generating/hashing them in the browser.
+ 4. Enter only verified operators, routes, schedules and fares; remove hash-generated trips and random occupancy.
+ 5. Show live tracking only with a real GPS source; otherwise label it a route map.
+ 6. Add SEO/meta, legal pages (Terms, Privacy, FAQ, Contact, About), and a footer with real contact info.
+ 7. Self-host Leaflet/qrcode (pin versions, add integrity hashes) and add a Content-Security-Policy.
+-->
+
+<!-- IMPROVE: SEO and sharing. Make the title descriptive (e.g. "Laguna Smart Bus | Book Bus Seats, Laguna to Metro Manila"), then add:
+     <meta name="description" content="...">, <link rel="canonical">, Open Graph/Twitter tags, a favicon, and a manifest.
+     This single-page app has no real URLs; consider hash or path routes (#/routes) so pages can be bookmarked and indexed. -->
+
 <title>Laguna Smart Bus</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -145,22 +161,48 @@ footer{margin-top:48px;padding:36px 0;background:linear-gradient(180deg,#0b1f4a,
 <button class="ic" id="bell" data-act="bell" aria-label="Notifications">🔔<i id="bc"></i></button></div>
 </div></header>
 <main id="app"></main>
+<!-- IMPROVE: Footer. Add links to About, FAQ, Terms, Privacy Policy, Booking and Cancellation Policy, Contact/Support,
+     and a Data Privacy Act contact. Do not add addresses, partnerships, endorsements or reviews until they are real and verified. -->
+
 <footer><div class="wrap"><b data-brand>Laguna Smart Bus</b> is a demonstration prototype. Stations, schedules, fares and bus numbers are sample data and are not connected to LLI, HM Transport, DLTB Co. or JAC Liner.
 <p style="margin-top:10px">Contact: support@example.com (placeholder) · Policies: placeholder · <button class="btn sm g" style="color:#fff;border-color:#5b73b5" data-act="reset">Reset demo</button></p></div></footer>
 <dialog id="dlg" aria-label="Booking details"></dialog><div id="toast" class="toast" role="status" aria-live="polite"></div>
+<!-- IMPROVE: Third-party assets. Pin and self-host Leaflet/qrcodejs (or add integrity= and crossorigin= attributes),
+     and send a Content-Security-Policy header from the server. Generate QR codes on the server for tickets. -->
+
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script>
 'use strict';
+/* IMPROVE:
+ * Everything below (operators, times, fares, distances, announcements) is SAMPLE data.
+ * Move it into database tables (operators, stations, routes, route_stops, fare_rules, trips) and load it through an API.
+ * Only list operators/routes after their participation and stop sequence are verified. Do not assume every operator serves every stop.
+ * HOLD_SEC=120 is client-side; holds must be created and expired on the server (about 5 to 10 minutes).
+ */
 /* ========= CONFIG & SAMPLE DATA (all simulated) ========= */
 const BRAND='Laguna Smart Bus', HOLD_SEC=120, SEATS=50, MPK=1.5; // 50-seater: 1 front + 11 rows of 4 + 5 in the back row
-const STOPS=[{n:'Sta. Cruz',km:0,m:'Santa Cruz, Laguna',lat:14.2785,lng:121.4161},{n:'Cubao',km:98,m:'Quezon City',lat:14.6197,lng:121.0537},{n:'Buendia',km:112,m:'Makati / Pasay',lat:14.5547,lng:121.0244},{n:'Alabang',km:130,m:'Muntinlupa',lat:14.4181,lng:121.0300}]; // sample distances, not official
+/* IMPROVE:
+ * Distances (km) are rough sample values. Replace with verified coordinates and route distances per operator route.
+ * Store stops per route (ordered), and distinguish terminal / station / stop / city. Also add reverse-direction routes.
+ * Travel time here is km * MPK (1.5 min/km): label it 'estimated' in the UI or use scheduled times from the operator.
+ */
+const STOPS=[{n:'Pagsanjan',km:0,m:'Pagsanjan, Laguna',lat:14.2733,lng:121.4547},{n:'Sta. Cruz',km:4,m:'Santa Cruz, Laguna',lat:14.2785,lng:121.4161},{n:'Pila',km:11,m:'Pila, Laguna',lat:14.2339,lng:121.3626},{n:'Victoria',km:19,m:'Victoria, Laguna',lat:14.2253,lng:121.3278},{n:'Bay',km:33,m:'Bay, Laguna',lat:14.1833,lng:121.2833},{n:'Los Baños',km:39,m:'Los Baños, Laguna',lat:14.1699,lng:121.2437},{n:'Calamba',km:51,m:'Calamba City, Laguna',lat:14.2117,lng:121.1653},{n:'Cabuyao',km:63,m:'Cabuyao City, Laguna',lat:14.2724,lng:121.1251},{n:'Santa Rosa',km:73,m:'Santa Rosa City, Laguna',lat:14.3122,lng:121.1114},{n:'Biñan',km:83,m:'Biñan City, Laguna',lat:14.3333,lng:121.0802},{n:'San Pedro',km:91,m:'San Pedro City, Laguna',lat:14.3595,lng:121.0473},{n:'Muntinlupa',km:99,m:'Muntinlupa City (Alabang)',lat:14.4181,lng:121.03},{n:'Taguig',km:111,m:'Taguig City',lat:14.5176,lng:121.0509},{n:'Makati',km:119,m:'Makati City',lat:14.5547,lng:121.0244},{n:'Pasay (Buendia)',km:125,m:'Pasay City, Buendia',lat:14.5543,lng:121.0123},{n:'Quezon City (Cubao)',km:137,m:'Quezon City, Cubao',lat:14.6197,lng:121.0537}];
+const IX=n=>STOPS.findIndex(s=>s.n===n); // sample distances, not official
 const OPS=[{id:'LLI',mult:1,type:'Aircon (sample)',times:['05:30','08:15','13:00','17:45'],ann:'Sample announcement: no active advisories.'},
 {id:'HM Transport',mult:1.05,type:'Aircon (sample)',times:['06:00','09:30','14:15','18:30'],ann:'Sample announcement: schedule is for demo only.'},
 {id:'DLTB Co.',mult:.95,type:'Ordinary (sample)',times:['05:00','07:45','12:30','16:00'],ann:'Sample announcement: extra trips on weekends (demo).'},
 {id:'JAC Liner',mult:1.1,type:'Deluxe (sample)',times:['06:45','10:00','15:00','19:00'],ann:'Sample announcement: seat holds last 2 minutes.'}];
+/* IMPROVE:
+ * Fares are a made-up formula plus per-operator multipliers. Use published fare tables per operator/route, with a source note.
+ * Calculate fares on the server; never trust a fare computed in the browser. Document discount rules (Student/Senior/PWD) and ID checks.
+ */
 const FARE={base:15,perKm:1.85,min:25}, DISC=.2, CATS={Regular:0,Student:DISC,Senior:DISC,PWD:DISC}; // 20% discount (sample fare rule, not official)
+/* IMPROVE:
+ * Hard-coded demo passengers and transit cards. Replace with real registration: name, email, PH mobile, password, email verification,
+ * password reset, rate limiting, and consent to Terms/Privacy, using an auth provider such as Supabase Auth.
+ */
 const PAX={A:{name:'Ana Reyes',card:'450012340001'},B:{name:'Ben Cruz',card:'450012340002'}};
 const ADV=['Confirmed','Checked In','Boarded','Approaching Destination','Alighting Pending','Alighted'];
 const OPLBL={'Confirmed':'Manual check-in','Checked In':'Confirm boarding','Boarded':'Near destination','Approaching Destination':'Request exit check','Alighting Pending':'Confirm exit'};
@@ -176,8 +218,13 @@ const hash=s=>[...s].reduce((a,c)=>(a*31+c.charCodeAt(0))>>>0,7);
 const fmtT=m=>{m=((m%1440)+1440)%1440;return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0')};
 const stopTime=(tr,i)=>fmtT(+tr.time.slice(0,2)*60+ +tr.time.slice(3)+Math.round(STOPS[i].km*MPK));
 let tt;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),3200)}
+/* IMPROVE:
+ * localStorage is not a database: data is per-browser, editable by the user, and lost when cleared. Use a transactional backend.
+ * Also remove the passenger/operator role switcher (#role): roles must come from the server and be enforced there.
+ * Never mark payments/bookings from client state; the cleanup below that flips Pending to Failed should be a server reconciliation job.
+ */
 /* ========= STORE (localStorage = prototype only; a real system needs a transactional backend) ========= */
-const KEY='lsb_demo_v1';
+const KEY='lsb_demo_v2';
 const fresh=()=>({pax:'A',view:'find',bookings:[],txs:[],cards:{'450012340001':{owner:'A',bal:500,status:'Active'},'450012340002':{owner:'B',bal:300,status:'Active'}},notes:[],log:[],holds:{},watch:[],link:{},n:1});
 let S;try{S=Object.assign(fresh(),JSON.parse(localStorage.getItem(KEY))||{})}catch(e){S=fresh()}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
@@ -188,18 +235,39 @@ const note=(p,t)=>S.notes.unshift({pax:p,text:t,ts:stamp(),read:false});
 const logIt=(action,rec)=>S.log.unshift({ts:stamp(),who:who(),action,rec});
 const nid=()=>S.n++;
 /* ========= TRIPS, FARES, SEGMENT AVAILABILITY ========= */
+/* IMPROVE:
+ * Trips are generated from fixed time lists and hash-based bus numbers for any date. Real trips must be entered by an authorized admin/operator
+ * (operator, vehicle, route, date, departure, fare policy, booking cutoff, status) and only those should be shown.
+ */
 function tripsFor(date){return OPS.flatMap(o=>o.times.map(t=>({id:`${date}|${o.id}|${t}`,date,op:o,time:t,bus:`${o.id.slice(0,3).toUpperCase().replace(/\W/g,'')}-${100+hash(o.id+t)%900}`})))}
 const tripById=id=>tripsFor(id.split('|')[0]).find(x=>x.id===id);
+/* IMPROVE:
+ * 'Blocked' seats are chosen by hash. Replace with real per-vehicle unavailable seats set by the operator.
+ */
 const blocked=(tr,s)=>s===1&&hash(tr.id)%3===0;
+/* IMPROVE:
+ * seeds() fabricates occupied seats at random. Remove it: show only real bookings. Random occupancy misleads passengers about availability.
+ */
 const SEEDC=new Map();
-function seeds(tr){let o=SEEDC.get(tr.id);if(o)return o;o=[];for(let s=1;s<=SEATS;s++){if(s===11||s===12)continue;const h=hash(tr.id+s);if(h%4===0)o.push({seat:s,from:h%2,to:2+(h>>>3)%2,status:'Boarded',seed:1})}SEEDC.set(tr.id,o);return o}
+function seeds(tr){let o=SEEDC.get(tr.id);if(o)return o;o=[];for(let s=1;s<=SEATS;s++){if(s===11||s===12)continue;const h=hash(tr.id+s);if(h%4===0){const f=(h>>>5)%(STOPS.length-1);o.push({seat:s,from:f,to:f+1+(h>>>3)%(STOPS.length-1-f),status:'Boarded',seed:1})}}SEEDC.set(tr.id,o);return o}
 const allB=tr=>[...seeds(tr),...S.bookings.filter(b=>b.tripId===tr.id&&b.status!=='Cancelled')];
 const hk=(tr,s)=>tr.id+'#'+s;
 const departed=(tr,f)=>new Date(tr.date+'T'+tr.time+':00').getTime()+Math.round(STOPS[f].km*MPK)*60000<=Date.now(); // bus already passed boarding stop f
+/* IMPROVE:
+ * Hold expiry runs in the browser here. Move it to the server: expire holds in the database and re-check at confirmation.
+ * Two people on different devices cannot see each other's holds today; a database constraint is needed to prevent double booking.
+ */
 function sweep(){const n=Date.now();for(const k in S.holds)if(S.holds[k].exp<=n)delete S.holds[k]}
+/* IMPROVE:
+ * Move to the server. Round per the operator's published rules and return a fare breakdown with the booking.
+ */
 function fare(op,f,t,cat){const km=STOPS[t].km-STOPS[f].km,b=Math.round(Math.max(FARE.min,(FARE.base+km*FARE.perKm)*op.mult)*4)/4,d=Math.round(b*(CATS[cat]||0)*100)/100;return{km,base:b,disc:d,total:Math.round((b-d)*100)/100}}
 /* A seat is reusable for [f,t) only when no booking overlaps AND every earlier passenger on that seat has CONFIRMED exit (status Alighted).
    Scheduled arrival time never frees a seat. */
+/* IMPROVE:
+ * The overlap logic (from < t && f < to) is sound and worth keeping, but it must run in the database (range-overlap exclusion constraint),
+ * not only in JS. Decide the policy for 'awaiting exit confirmation' and make it operator-configurable.
+ */
 function seatState(tr,s,f,t){
  if(blocked(tr,s))return'blocked';let st='free';
  for(const b of allB(tr)){if(b.seat!==s)continue;if(b.from<t&&f<b.to)return'occupied';if(b.to<=f&&b.status!=='Alighted')st='pending'}
@@ -208,7 +276,7 @@ function seatState(tr,s,f,t){
  if(st==='free'&&h)return'mine';return st}
 const avail=(tr,f,t)=>{let n=0;for(let s=1;s<=SEATS;s++){const x=seatState(tr,s,f,t);if(x==='free'||x==='mine')n++}return n};
 /* ========= UI STATE ========= */
-const UI={f:0,t:1,date:today(),time:'any',op:'all',cat:'Regular',trip:null,seat:null,card:null,busy:false,mode:'',opTrip:null,q:'',prog:0,trk:null};
+const UI={f:IX('Sta. Cruz'),t:IX('Quezon City (Cubao)'),date:today(),time:'any',op:'all',cat:'Regular',trip:null,seat:null,card:null,busy:false,mode:'',opTrip:null,q:'',prog:0,trk:null};
 if(tripsFor(today()).every(x=>departed(x,0)))UI.date=ymd(new Date(Date.now()+864e5)); // all of today's buses have left: default to tomorrow
 const app=$('#app'),dlg=$('#dlg');
 const opts=(arr,sel,off=0)=>arr.map((x,i)=>`<option value="${i+off}" ${i+off===sel?'selected':''}>${esc(x.n||x)}</option>`).join('');
@@ -219,16 +287,20 @@ function renderNav(){const ok=S.pax==='OP'?['find','routes','track','ops']:['fin
  $('#role').value=S.pax;const c=S.notes.filter(n=>n.pax===S.pax&&!n.read).length;$('#bc').textContent=c||'';$('#bell').style.display=S.pax==='OP'?'none':''}
 function render(){dropMap();renderNav();({find:rFind,routes:rRoutes,track:rTrack,trips:rTrips,card:rCard,ops:rOps})[S.view]();document.querySelectorAll('[data-brand]').forEach(e=>e.textContent=BRAND);save()}
 /* ========= FIND A BUS ========= */
+/* IMPROVE:
+ * UX: support more than 1 passenger, show estimated times as 'est.', add reverse-direction search, a swap button, and clear empty/error states.
+ * Remove 'Demo data only' wording only after real data and payments are live.
+ */
 function rFind(){app.innerHTML=`<section class="hero"><div class="wrap"><h1>Reserve your seat by stop, not just by bus.</h1>
 <p>Search Laguna bus trips, pick a seat for your exact segment, pay with a transit card and ride with a digital ticket. Demo data only.</p>
-<div class="line" aria-hidden="true"><i class="stop"><span>Sta. Cruz</span></i><div class="seg sA"><b style="color:#7be0d0">Ana · Seat 12</b></div><i class="stop"><span>Cubao</span></i><div class="seg sB"><b style="color:#9dbcff">Ben · Seat 12</b></div><i class="stop"><span>Buendia</span></i><div class="seg sB"></div><i class="stop"><span>Alabang</span></i></div></div></section>
+<div class="line" aria-hidden="true"><i class="stop"><span>Sta. Cruz</span></i><div class="seg sA"><b style="color:#7be0d0">Ana · Seat 12</b></div><i class="stop"><span>Calamba</span></i><div class="seg sB"><b style="color:#9dbcff">Ben · Seat 12</b></div><i class="stop"><span>Muntinlupa</span></i><div class="seg sB"></div><i class="stop"><span>Cubao</span></i></div></div></section>
 <div class="wrap"><form class="panel" id="sf" aria-label="Journey search"><div class="fgrid">
-<label>From<select id="sf-f">${opts(STOPS.slice(0,3),UI.f)}</select></label>
+<label>From<select id="sf-f">${opts(STOPS.slice(0,STOPS.length-1),UI.f)}</select></label>
 <label>To<select id="sf-t">${opts(STOPS.slice(UI.f+1),UI.t,UI.f+1)}</select></label>
 <label>Date<input type="date" id="sf-d" value="${UI.date}" min="${today()}" required></label>
 <label>Departure<select id="sf-h">${['any:Any time','am:Morning (before 12:00)','pm:Afternoon (12:00 to 17:00)','ev:Evening (after 17:00)'].map(x=>{const[v,l]=x.split(':');return`<option value="${v}" ${UI.time===v?'selected':''}>${l}</option>`}).join('')}</select></label>
 <label>Bus company<select id="sf-o"><option value="all">All companies</option>${OPS.map(o=>`<option ${UI.op===o.id?'selected':''}>${o.id}</option>`).join('')}</select></label>
-<button class="btn t" type="submit">Search buses</button></div><p class="mut" id="sf-msg" style="margin:10px 0 0;font-size:13px">1 passenger per booking in this prototype. Route: Sta. Cruz, Cubao, Buendia, Alabang (sample corridor).</p></form>
+<button class="btn t" type="submit">Search buses</button></div><p class="mut" id="sf-msg" style="margin:10px 0 0;font-size:13px">1 passenger per booking in this prototype. Route: Pagsanjan to Quezon City (Cubao), 16 stops (sample corridor).</p></form>
 <section class="sec" aria-live="polite"><h2>Available trips</h2><div id="results" class="list"></div></section>
 <section class="sec"><h2>How the transit card works</h2><div class="grid">
 <div class="card"><h3>1. Link or register</h3><p class="mut">Add your card to your account. Demo cards: 4500 1234 0001 and 0002.</p></div>
@@ -266,6 +338,11 @@ function rSeat(){const tr=tripById(UI.trip),fr=fare(tr.op,UI.f,UI.t,UI.cat),c=S.
  <div style="display:flex;gap:8px;margin-top:8px"><input id="cn" placeholder="Or type card number" aria-label="Card number" inputmode="numeric"><button class="btn g sm" data-act="usecard">Use</button></div>
  ${c?`<p style="margin-top:8px"><b>${mask(UI.card)}</b> · ${esc(PAX[c.owner].name)} · Balance ${peso(c.bal)} · <span class="badge ${c.status==='Active'?'g':'r'}">${c.status}</span></p>`:'<p class="mut" style="margin-top:8px">No card scanned yet. On Android Chrome this reads a real NFC card; elsewhere it uses your linked card.</p>'}
  <button class="btn t" style="width:100%;margin-top:12px" data-act="pay" ${UI.busy?'disabled':''}>${UI.busy?'Processing…':'Confirm payment · '+peso(fr.total)}</button></div></div></div>`)}
+/* IMPROVE:
+ * This is a simulated payment (setTimeout then success). Replace with: server creates a gateway payment (GCash, Maya, card via PayMongo/Xendit),
+ * user is redirected to the gateway, and the booking is confirmed only after a verified webhook. Use an idempotency key, handle pending/failed/expired,
+ * and never collect or store raw card details. Label sandbox payments clearly.
+ */
 function pay(){if(UI.busy)return;const tr=tripById(UI.trip),{f,t,seat,cat}=UI,c=S.cards[UI.card],px=S.pax,pname=who();
  if(!seat)return toast('Select a seat first.');if(!c)return toast('Scan or enter a registered card.');
  if(c.status!=='Active')return toast('This card is blocked. Use another card.');
@@ -283,10 +360,17 @@ function pay(){if(UI.busy)return;const tr=tripById(UI.trip),{f,t,seat,cat}=UI,c=
   note(px,`Booking ${id} confirmed. Seat ${seat}, ${STOPS[f].n} → ${STOPS[t].n}.`);note(px,`Payment ${peso(fr.total)} received (${tx.ref}).`);
   if(c.bal<50)note(px,'Low card balance. Please top up.');S.log.unshift({ts:stamp(),who:pname,action:'Booking paid',rec:id});UI.seat=null;save();dlg.close();render();showReceipt(id)},700)}
 /* ========= TICKETS & RECEIPTS ========= */
+/* IMPROVE:
+ * Fallback QR is a decorative pattern, not a scannable code. Remove it once QR generation moves to the server.
+ */
 function qrFallback(txt){let r=hash(txt),c='';const n=21,F=(x,y)=>`<path d="M${x} ${y}h7v7h-7z" fill="#000"/><path d="M${x+1} ${y+1}h5v5h-5z" fill="#fff"/><path d="M${x+2} ${y+2}h3v3h-3z" fill="#000"/>`;
  for(let y=0;y<n;y++)for(let x=0;x<n;x++){if((x<8&&y<8)||(x>12&&y<8)||(x<8&&y>12))continue;r=(r*1103515245+12345)>>>0;if((r>>>16)&1)c+=`<rect x="${x}" y="${y}" width="1" height="1"/>`}
  return`<svg viewBox="0 0 21 21" width="150" height="150" role="img" aria-label="Demo ticket pattern" style="background:#fff;padding:6px;border-radius:8px">${F(0,0)}${F(14,0)}${F(0,14)}<g fill="#000">${c}</g></svg>`}
 /* Ticket code = reference + checksum. Real QR (qrcodejs). Verified by staff scan below. A production system must sign and verify on a server. */
+/* IMPROVE:
+ * Ticket code = reference + weak hash; anyone can forge it. Use an opaque random token stored in the database and verify via a server endpoint
+ * that returns only booking validity and minimal details (no extra personal data).
+ */
 const tcode=b=>`LSB|${b.id}|${b.txRef}|${hash(b.id+b.txRef)}`;
 function drawQR(code){try{new QRCode($('#qrbox'),{text:code,width:150,height:150,correctLevel:QRCode.CorrectLevel.M})}catch(e){$('#qrbox').innerHTML=qrFallback(code)}}
 async function camScan(onCode){if(!('BarcodeDetector' in window))return toast('Camera QR scanning needs Chrome or Edge. Paste the ticket code instead.');
@@ -294,6 +378,9 @@ async function camScan(onCode){if(!('BarcodeDetector' in window))return toast('C
   const det=new BarcodeDetector({formats:['qr_code']}),stop=()=>st.getTracks().forEach(t=>t.stop());
   const loop=async()=>{if(!v.isConnected)return stop();try{const r=await det.detect(v);if(r[0]){stop();$('#cam').replaceChildren();return onCode(r[0].rawValue)}}catch(e){}requestAnimationFrame(loop)};loop()}
  catch(e){toast('Camera blocked. Allow camera access or paste the code.')}}
+/* IMPROVE:
+ * Validation reads localStorage. Replace with an authenticated staff API call; log each scan and prevent reuse on the wrong trip/date.
+ */
 function validateTicket(code){const p=String(code).trim().split('|'),b=S.bookings.find(x=>x.id===p[1]);
  if(p[0]!=='LSB'||!b||p[3]!==String(hash(p[1]+p[2])))return toast('Invalid ticket code.');
  if(UI.opTrip&&b.tripId!==UI.opTrip)return toast('This ticket is for a different trip. Select that trip first.');
@@ -318,6 +405,10 @@ function showReceipt(id){const b=S.bookings.find(x=>x.id===id),tr=tripById(b.tri
 /* ========= MY BOOKINGS ========= */
 const STAGES=['Booked','Checked In','Boarded','Approaching','Alighted','Completed'];
 function stageIdx(s){return{'Confirmed':0,'Checked In':1,'Boarded':2,'Approaching Destination':3,'Alighting Pending':3,'Alighted':5}[s]}
+/* IMPROVE:
+ * Bookings must be fetched from the server and filtered by the signed-in user's id server-side. Add upcoming/past tabs, ticket download/print,
+ * cancellation requests per policy, and payment history. Do not promise refunds that are not actually supported.
+ */
 function rTrips(){const mine=S.bookings.filter(b=>b.pax===S.pax).reverse(),ns=S.notes.filter(n=>n.pax===S.pax),w=S.watch.filter(x=>x.pax===S.pax);
  app.innerHTML=`<div class="wrap sec"><h2>My bookings</h2><div class="list">${mine.length?mine.map(b=>{const tr=tripById(b.tripId),i=stageIdx(b.status);return`<article class="card"><div class="meta"><b style="color:var(--ink)">${esc(tr.op.id)} · ${tr.bus}</b><span>${tr.date} ${tr.time}</span><span>Seat ${b.seat}</span><span>${peso(b.fare)}</span><span class="badge ${b.status==='Cancelled'?'r':'b'}">${b.status}</span></div>
  <h3 style="margin:8px 0 0">${STOPS[b.from].n} → ${STOPS[b.to].n}</h3>
@@ -329,6 +420,9 @@ function rTrips(){const mine=S.bookings.filter(b=>b.pax===S.pax).reverse(),ns=S.
  <h3 style="margin-top:24px">Notifications</h3><div class="list">${ns.length?ns.slice(0,12).map(n=>`<div class="card" style="padding:10px 14px"><b>${esc(n.text)}</b><div class="mut" style="font-size:12px">${n.ts} · in-app (email/SMS/push need extra infrastructure)</div></div>`).join(''):'<div class="empty">Nothing yet.</div>'}</div></div>`;
  S.notes.forEach(n=>{if(n.pax===S.pax)n.read=true});save();renderNav()}
 /* ========= TRANSIT CARD ========= */
+/* IMPROVE:
+ * Transit card is a prototype wallet. If a real card/wallet is planned it needs its own provider and ledger; otherwise remove it in favor of gateway payments.
+ */
 function rCard(){const num=PAX[S.pax].card,c=S.cards[num],tx=S.txs.filter(x=>x.card===num);
  app.innerHTML=`<div class="wrap sec"><h2>Transit card</h2><div class="grid"><div class="cardviz"><div>${BRAND} · demo card</div><div><div class="bal">${peso(c.bal)}</div><div>${mask(num)} · ${esc(PAX[S.pax].name)} · ${c.status}</div></div></div>
  <div class="card"><h3>Top up (simulated)</h3><p class="mut">No real money moves. A live version needs a payment provider.</p><div style="display:flex;gap:8px;flex-wrap:wrap">${[100,200,500].map(a=>`<button class="btn sm" data-act="topup" data-a="${a}">+${peso(a)}</button>`).join('')}</div>
@@ -336,16 +430,22 @@ function rCard(){const num=PAX[S.pax].card,c=S.cards[num],tx=S.txs.filter(x=>x.c
  <h3 style="margin-top:16px">Card safety</h3><button class="btn r sm" data-act="block" ${c.status!=='Active'?'disabled':''}>Report lost / block card</button>${c.status!=='Active'?'<p class="mut" style="margin-top:8px">Blocked. Staff must reissue in a real system.</p>':''}</div></div>
  <h3 style="margin-top:26px">Transactions</h3><div class="card tw"><table><thead><tr><th>Date</th><th>Reference</th><th>Details</th><th>Status</th><th>Amount</th></tr></thead><tbody>${tx.length?tx.map(x=>`<tr><td>${x.ts}</td><td>${x.ref}</td><td>${esc(x.desc)}</td><td><span class="badge ${x.status==='Successful'?'g':x.status==='Failed'?'r':'o'}">${x.status}</span></td><td>${x.type==='fare'?'−':'+'}${peso(x.amt)}</td></tr>`).join(''):'<tr><td colspan="5" class="mut">No transactions yet.</td></tr>'}</tbody></table></div></div>`}
 /* ========= ROUTES & STATIONS ========= */
+/* IMPROVE:
+ * Add a station detail view with verified coordinates, a per-operator stop sequence, and accessibility info. Keep OSM attribution.
+ */
 function rRoutes(){const q=UI.q.toLowerCase(),st=STOPS.filter(s=>(s.n+s.m).toLowerCase().includes(q));
- app.innerHTML=`<div class="wrap sec"><h2>Bus companies</h2><div class="grid">${OPS.map(o=>`<article class="card"><span class="badge o">Sample data</span><h3 style="margin-top:8px">${esc(o.id)}</h3><p class="mut" style="margin-bottom:6px">Route: Sta. Cruz → Cubao → Buendia → Alabang<br>${o.type} · about ${Math.round(STOPS[3].km*MPK)} min · ${SEATS} seats<br>Departures: ${o.times.join(', ')}</p><p class="note">${o.ann}</p>
+ app.innerHTML=`<div class="wrap sec"><h2>Bus companies</h2><div class="grid">${OPS.map(o=>`<article class="card"><span class="badge o">Sample data</span><h3 style="margin-top:8px">${esc(o.id)}</h3><p class="mut" style="margin-bottom:6px">Route: ${STOPS.map(s=>s.n).join(' → ')}<br>${o.type} · about ${Math.round(STOPS[STOPS.length-1].km*MPK)} min · ${SEATS} seats<br>Departures: ${o.times.join(', ')}</p><p class="note">${o.ann}</p>
  <div style="display:flex;gap:8px;margin-top:12px"><button class="btn g sm" data-act="company" data-o="${esc(o.id)}">View buses</button><button class="btn sm" data-act="company" data-o="${esc(o.id)}">Book now</button></div></article>`).join('')}</div>
- <h2 style="margin-top:34px">Route map (schematic)</h2><div class="card" style="padding:34px 30px 52px"><div class="line" style="margin:0;max-width:none">${STOPS.map((s,i)=>`<i class="stop" style="border-color:var(--card);box-shadow:0 0 0 2px var(--navy)"><span style="color:var(--ink)">${s.n}<br><small class="mut">${s.km} km</small></span></i>${i<3?'<div class="seg sC"></div>':''}`).join('')}</div></div>
- <h2 style="margin-top:34px">Station directory</h2><label style="max-width:360px">Search stations<input id="q" value="${esc(UI.q)}" placeholder="Name or city" data-inp="q"></label>
+ <h2 style="margin-top:34px">Route map: ${STOPS.length} towns and cities passed</h2><div class="card"><ol style="list-style:none;margin:0;padding:0">${STOPS.map((s,i)=>`<li style="display:flex;gap:14px"><div style="display:flex;flex-direction:column;align-items:center"><i class="stop" style="border-color:var(--card);box-shadow:0 0 0 2px var(--navy);margin-top:4px"></i>${i<STOPS.length-1?'<div class="sC" style="width:3px;flex:1;min-height:24px"></div>':''}</div><div style="padding-bottom:12px"><b>${esc(s.n)}</b> <span class="mut">· ${esc(s.m)} · ${s.km} km</span></div></li>`).join('')}</ol></div>\n <h2 style="margin-top:34px">Station directory</h2><label style="max-width:360px">Search stations<input id="q" value="${esc(UI.q)}" placeholder="Name or city" data-inp="q"></label>
  <div class="grid" style="margin-top:14px">${st.length?st.map(s=>`<div class="card"><h3>${s.n} terminal</h3><p class="mut">${s.m}<br>Address, hours and landmarks: not verified (placeholder).<br>Routes: all four companies (sample).</p></div>`).join(''):'<div class="empty">No station matches. Try a different name.</div>'}</div></div>`}
 /* ========= BUS TRACKING (Leaflet + OpenStreetMap). Live = staff phone GPS (same browser until a backend exists); otherwise demo playback ========= */
 let PLAY,GPSW,MAP,MARK;
 function dropMap(){try{if(MAP)MAP.remove()}catch(e){}MAP=MARK=null}
 function posAt(p){const T=STOPS[STOPS.length-1].km,d=p*T;let i=0;while(i<STOPS.length-2&&d>=STOPS[i+1].km)i++;const a=STOPS[i],b=STOPS[i+1],t=Math.min(1,(d-a.km)/(b.km-a.km));return{lat:a.lat+(b.lat-a.lat)*t,lng:a.lng+(b.lng-a.lng)*t,i,next:i+1,d}}
+/* IMPROVE:
+ * Tracking is 'Demo playback' or localStorage GPS. Show a moving bus only when a real GPS feed exists (last location, update time, vehicle id).
+ * Otherwise label the map 'Route map / scheduled route' and remove the play slider.
+ */
 function moveBus(){const el=$('#trkinfo');if(!el)return;const g=(S.gps||{})[UI.trk],live=g&&Date.now()-g.ts<120000;let ll;
  if(live){ll=[g.lat,g.lng];el.textContent='Live GPS from staff device · updated '+Math.round((Date.now()-g.ts)/1000)+'s ago'}
  else{const q=posAt(UI.prog),tr=tripById(UI.trk);ll=[q.lat,q.lng];el.textContent=`Demo playback · ${Math.round(q.d)} km from ${STOPS[0].n} · next stop ${STOPS[q.next].n}, scheduled ${stopTime(tr,q.next)}`}
@@ -356,7 +456,7 @@ function rTrack(){const trs=tripsFor(today());if(!trs.find(x=>x.id===UI.trk))UI.
  <div id="map" role="region" aria-label="Bus route map"></div><p class="mut" style="font-size:13px;margin-top:10px">Live position appears when staff share GPS on the Operator page (same browser only until a backend is added). Otherwise the bus moves in demo playback. The dashed line is schematic, not the road.</p></div>`;
  dropMap();if(typeof L==='undefined'){$('#map').innerHTML='<div class="empty">Map library did not load. Check your connection. The status above still updates.</div>'}
  else{MAP=L.map('map');L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap contributors'}).addTo(MAP);const pts=STOPS.map(x=>[x.lat,x.lng]);L.polyline(pts,{color:'#2563eb',weight:4,dashArray:'6 8'}).addTo(MAP);
-  STOPS.forEach(x=>L.circleMarker([x.lat,x.lng],{radius:7,color:'#0b1f4a',fillColor:'#fff',fillOpacity:1,weight:3}).addTo(MAP).bindTooltip(x.n,{permanent:true,direction:'right'}));
+  STOPS.forEach(x=>L.circleMarker([x.lat,x.lng],{radius:7,color:'#0b1f4a',fillColor:'#fff',fillOpacity:1,weight:3}).addTo(MAP).bindTooltip(x.n,{permanent:false,direction:'right'}));
   MARK=L.marker(pts[0],{icon:L.divIcon({html:'🚌',className:'busico',iconSize:[30,30]})}).addTo(MAP);MAP.fitBounds(pts,{padding:[30,30]})}
  moveBus()}
 /* ========= OPERATOR DASHBOARD ========= */
@@ -365,6 +465,9 @@ function setStatus(b,s){b.status=s;const tr=tripById(b.tripId);logIt(`Status →
  if(s==='Alighting Pending')note(b.pax,`Please confirm you got off at ${STOPS[b.to].n}.`);
  if(s==='Alighted'){note(b.pax,`Trip completed. Thank you for riding ${tr.op.id}.`);S.log.unshift({ts:stamp(),who:who(),action:'Seat handover recorded',rec:`Seat ${b.seat} released at ${STOPS[b.to].n} (${tr.bus})`});
   S.watch=S.watch.filter(w=>{if(w.tripId===b.tripId&&w.seat===b.seat&&w.from>=b.to){note(w.pax,`Seat ${w.seat} is ready for you on ${tr.op.id} from ${STOPS[w.from].n}. Book it now.`);return false}return true})}}
+/* IMPROVE:
+ * Operator tools need real operator accounts with role-based access limited to their own trips, plus audit logs. UI hiding is not security.
+ */
 function rOps(){const ids=[...new Set(S.bookings.map(b=>b.tripId))];if(!ids.includes(UI.opTrip))UI.opTrip=ids[0]||null;const tr=UI.opTrip&&tripById(UI.opTrip),bk=tr?S.bookings.filter(b=>b.tripId===tr.id&&b.status!=='Cancelled'):[];
  const nx=bk.filter(b=>['Boarded','Approaching Destination','Alighting Pending'].includes(b.status)).sort((a,b)=>a.to-b.to)[0];
  app.innerHTML=`<div class="wrap sec"><h2>Operator dashboard</h2><p class="mut">For staff use while the bus is stopped. Role: Station / boarding staff (demo).</p>
