@@ -349,7 +349,7 @@ function rFind(){app.innerHTML=`<section class="hero"><div class="wrap"><h1>Rese
 <label>From<select id="sf-f">${opts(STOPS.slice(0,STOPS.length-1),UI.f)}</select></label>
 <label>To<select id="sf-t">${opts(STOPS.slice(UI.f+1),UI.t,UI.f+1)}</select></label>
 <label>Date<input type="date" id="sf-d" value="${UI.date}" min="${today()}" required></label>
-<label>Departure<select id="sf-h">${['any:Any time','am:Morning (before 12:00)','pm:Afternoon (12:00 to 17:00)','ev:Evening (after 17:00)'].map(x=>{const[v,l]=x.split(':');return`<option value="${v}" ${UI.time===v?'selected':''}>${l}</option>`}).join('')}</select></label>
+<label>Departure<select id="sf-h">${['any:Any time','am:Morning (7am - 12pm)','pm:Afternoon (12pm - 5pm)','ev:Evening (5pm - 10pm)'].map(x=>{const[v,l]=x.split(':');return`<option value="${v}" ${UI.time===v?'selected':''}>${l}</option>`}).join('')}</select></label>
 <label>Bus company<select id="sf-o"><option value="all">All companies</option>${OPS.map(o=>`<option ${UI.op===o.id?'selected':''}>${o.id}</option>`).join('')}</select></label>
 <button class="btn t" type="submit">Search buses</button></div><p class="mut" id="sf-msg" style="margin:10px 0 0;font-size:13px">1 passenger per booking in this prototype. Route: Pagsanjan to Quezon City (Cubao), 16 stops (sample corridor).</p></form>
 <section class="sec" aria-live="polite"><h2>Available trips</h2><div id="results" class="list"></div></section>
