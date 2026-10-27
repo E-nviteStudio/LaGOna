@@ -20,7 +20,7 @@ Search "IMPROVE:" to find each note. Summary of priorities:
      <meta name="description" content="...">, <link rel="canonical">, Open Graph/Twitter tags, a favicon, and a manifest.
      This single-page app has no real URLs; consider hash or path routes (#/routes) so pages can be bookmarked and indexed. -->
 
-<title>Laguna Smart Bus</title>
+<title>LagunAround</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{--navy:#0b1f4a;--navy2:#16336f;--ink:#14213d;--mut:#5b6784;--bg:#f3f5f9;--card:#fff;--line:#e0e5ee;--teal:#0f9d8a;--tealbg:#dff5f1;--org:#b45f00;--orgbg:#fff0dc;--red:#d64550;--redbg:#fde6e8;--blue:#2563eb;--bluebg:#e3ecff;--yel:#f4c430;--r:14px;--sh:0 1px 2px rgba(11,31,74,.06),0 6px 18px rgba(11,31,74,.07);--f:'Plus Jakarta Sans',system-ui,Segoe UI,sans-serif;color-scheme:light dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -169,21 +169,40 @@ footer{margin-top:48px;padding:36px 0;background:linear-gradient(180deg,#0b1f4a,
 textarea{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;resize:vertical}
 .opmap .seat.tr{background:#efe3ff;color:#5b2a9e;border:2px dashed #7c3aed}
 </style>
+<style id="dock">
+/* ===== bottom dock: modules + account buttons ===== */
+.dock{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(11,31,74,.96);-webkit-backdrop-filter:saturate(1.5) blur(14px);backdrop-filter:saturate(1.5) blur(14px);border-top:1px solid rgba(255,255,255,.12);box-shadow:0 -8px 24px rgba(3,10,30,.25);padding-bottom:env(safe-area-inset-bottom,0px)}
+.dock .wrap{display:flex;align-items:center;gap:12px;min-height:62px;padding-top:6px;padding-bottom:6px}
+.dock nav{order:0;flex:1 1 auto;min-width:0;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}.dock nav::-webkit-scrollbar{display:none}
+.dock nav button{flex:none;white-space:nowrap}.dock nav button:first-child{margin-left:auto}.dock nav button:last-child{margin-right:auto}
+.dock nav button[aria-current=page]::after{bottom:auto;top:-6px}
+.dock .acct{flex:none}
+.top .tools{margin-left:auto}
+.logo{font-size:.95rem;letter-spacing:.08em}
+.toast{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+footer{padding-bottom:calc(36px + 72px + env(safe-area-inset-bottom,0px))}
+@media(max-width:720px){.top .bar{flex-wrap:nowrap;gap:8px}.top .tools{gap:6px}.top .tools select{max-width:100px;font-size:12.5px;padding:8px}
+.dock .wrap{flex-wrap:wrap;gap:4px;padding-top:8px;padding-bottom:4px}
+.dock .acct{order:-1;width:100%;gap:8px}.dock .acct .btn{flex:1;min-height:36px;font-size:13px}
+.dock nav{flex:1 1 100%}
+.toast{bottom:calc(132px + env(safe-area-inset-bottom,0px))}
+footer{padding-bottom:calc(36px + 120px + env(safe-area-inset-bottom,0px))}}
+</style>
 </head>
 <body>
 <a class="skip" href="#app">Skip to content</a>
 <header class="top"><div class="wrap bar">
-<a class="brand" href="#find" data-act="nav" data-v="find"><span class="logo">LSB</span><b data-brand>Laguna Smart Bus</b></a>
-<nav id="nav" aria-label="Main"></nav>
-<div class="tools"><span class="acct" id="acct"></span><select id="role" aria-label="Demo user"><option value="A">Passenger A: Ana</option><option value="B">Passenger B: Ben</option><option value="OP">Operator staff</option></select>
+<a class="brand" href="#find" data-act="nav" data-v="find"><span class="logo">L.A</span><b data-brand>LagunAround</b></a>
+<div class="tools"><select id="role" aria-label="Demo user"><option value="A">Passenger A: Ana</option><option value="B">Passenger B: Ben</option><option value="OP">Operator staff</option></select>
 <button class="ic" id="bell" data-act="bell" aria-label="Notifications">🔔<i id="bc"></i></button></div>
 </div></header>
 <main id="app"></main>
 <!-- IMPROVE: Footer. Add links to About, FAQ, Terms, Privacy Policy, Booking and Cancellation Policy, Contact/Support,
      and a Data Privacy Act contact. Do not add addresses, partnerships, endorsements or reviews until they are real and verified. -->
 
-<footer><div class="wrap"><b data-brand>Laguna Smart Bus</b> is a demonstration prototype. Stations, schedules, fares and bus numbers are sample data and are not connected to LLI, HM Transport, DLTB Co. or JAC Liner.
+<footer><div class="wrap"><b data-brand>LagunAround</b> is a demonstration prototype. Stations, schedules, fares and bus numbers are sample data and are not connected to LLI, HM Transport, DLTB Co. or JAC Liner.
 <p style="margin-top:10px">Contact: support@example.com (placeholder) · Policies: placeholder · <button class="btn sm g" style="color:#fff;border-color:#5b73b5" data-act="reset">Reset demo</button></p></div></footer>
+<div class="dock"><div class="wrap"><nav id="nav" aria-label="Main"></nav><span class="acct" id="acct"></span></div></div>
 <dialog id="dlg" aria-label="Booking details"></dialog><dialog id="authdlg" aria-label="Account"></dialog><div id="toast" class="toast" role="status" aria-live="polite"></div>
 <!-- IMPROVE: Third-party assets. Pin and self-host Leaflet/qrcodejs (or add integrity= and crossorigin= attributes),
      and send a Content-Security-Policy header from the server. Generate QR codes on the server for tickets. -->
@@ -200,7 +219,7 @@ textarea{font:inherit;color:var(--ink);background:var(--card);border:1px solid v
  * HOLD_SEC=120 is client-side; holds must be created and expired on the server (about 5 to 10 minutes).
  */
 /* ========= CONFIG & SAMPLE DATA (all simulated) ========= */
-const BRAND='Laguna Smart Bus', HOLD_SEC=120, SEATS=50, MPK=1.5; // 50-seater: 1 front + 11 rows of 4 + 5 in the back row
+const BRAND='LagunAround', HOLD_SEC=120, SEATS=50, MPK=1.5; // 50-seater: 1 front + 11 rows of 4 + 5 in the back row
 /* IMPROVE:
  * Distances (km) are rough sample values. Replace with verified coordinates and route distances per operator route.
  * Store stops per route (ordered), and distinguish terminal / station / stop / city. Also add reverse-direction routes.
