@@ -20,7 +20,7 @@ Search "IMPROVE:" to find each note. Summary of priorities:
      <meta name="description" content="...">, <link rel="canonical">, Open Graph/Twitter tags, a favicon, and a manifest.
      This single-page app has no real URLs; consider hash or path routes (#/routes) so pages can be bookmarked and indexed. -->
 
-<title>LagunAround</title>
+<title>LaGOna</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{--navy:#0b1f4a;--navy2:#16336f;--ink:#14213d;--mut:#5b6784;--bg:#f3f5f9;--card:#fff;--line:#e0e5ee;--teal:#0f9d8a;--tealbg:#dff5f1;--org:#b45f00;--orgbg:#fff0dc;--red:#d64550;--redbg:#fde6e8;--blue:#2563eb;--bluebg:#e3ecff;--yel:#f4c430;--r:14px;--sh:0 1px 2px rgba(11,31,74,.06),0 6px 18px rgba(11,31,74,.07);--f:'Plus Jakarta Sans',system-ui,Segoe UI,sans-serif;color-scheme:light dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -192,7 +192,7 @@ footer{padding-bottom:calc(36px + 120px + env(safe-area-inset-bottom,0px))}}
 <body>
 <a class="skip" href="#app">Skip to content</a>
 <header class="top"><div class="wrap bar">
-<a class="brand" href="#find" data-act="nav" data-v="find"><span class="logo">L.A</span><b data-brand>LagunAround</b></a>
+<a class="brand" href="#find" data-act="nav" data-v="find"><span class="logo">GO</span><b data-brand>LaGOna</b></a>
 <div class="tools"><select id="role" aria-label="Demo user"><option value="A">Passenger A: Ana</option><option value="B">Passenger B: Ben</option><option value="OP">Operator staff</option></select>
 <button class="ic" id="bell" data-act="bell" aria-label="Notifications">🔔<i id="bc"></i></button></div>
 </div></header>
@@ -200,7 +200,7 @@ footer{padding-bottom:calc(36px + 120px + env(safe-area-inset-bottom,0px))}}
 <!-- IMPROVE: Footer. Add links to About, FAQ, Terms, Privacy Policy, Booking and Cancellation Policy, Contact/Support,
      and a Data Privacy Act contact. Do not add addresses, partnerships, endorsements or reviews until they are real and verified. -->
 
-<footer><div class="wrap"><b data-brand>LagunAround</b> is a demonstration prototype. Stations, schedules, fares and bus numbers are sample data and are not connected to LLI, HM Transport, DLTB Co. or JAC Liner.
+<footer><div class="wrap"><b data-brand>LaGOna</b> is a demonstration prototype. Stations, schedules, fares and bus numbers are sample data and are not connected to LLI, HM Transport, DLTB Co. or JAC Liner.
 <p style="margin-top:10px">Contact: support@example.com (placeholder) · Policies: placeholder · <button class="btn sm g" style="color:#fff;border-color:#5b73b5" data-act="reset">Reset demo</button></p></div></footer>
 <div class="dock"><div class="wrap"><nav id="nav" aria-label="Main"></nav><span class="acct" id="acct"></span></div></div>
 <dialog id="dlg" aria-label="Booking details"></dialog><dialog id="authdlg" aria-label="Account"></dialog><div id="toast" class="toast" role="status" aria-live="polite"></div>
@@ -219,7 +219,7 @@ footer{padding-bottom:calc(36px + 120px + env(safe-area-inset-bottom,0px))}}
  * HOLD_SEC=120 is client-side; holds must be created and expired on the server (about 5 to 10 minutes).
  */
 /* ========= CONFIG & SAMPLE DATA (all simulated) ========= */
-const BRAND='LagunAround', HOLD_SEC=120, SEATS=50, MPK=1.5; // 50-seater: 1 front + 11 rows of 4 + 5 in the back row
+const BRAND='LaGOna', HOLD_SEC=120, SEATS=50, MPK=1.5; // 50-seater: 1 front + 11 rows of 4 + 5 in the back row
 /* IMPROVE:
  * Distances (km) are rough sample values. Replace with verified coordinates and route distances per operator route.
  * Store stops per route (ordered), and distinguish terminal / station / stop / city. Also add reverse-direction routes.
