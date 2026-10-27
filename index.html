@@ -345,7 +345,7 @@ function render(){expireOffers();dropMap();renderNav();({report:rReport,inbox:rI
  */
 function rFind(){app.innerHTML=`<section class="hero"><div class="wrap"><h1>Reserve your seat by stop, not just by bus.</h1>
 <p>Search Laguna bus trips, pick a seat for your exact segment, pay with a transit card and ride with a digital ticket.</p>
-<div class="line" aria-hidden="true"><i class="stop"><span>Sta. Cruz</span></i><div class="seg sA"><b style="color:#7be0d0">Ana · Seat 12</b></div><i class="stop"><span>Calamba</span></i><div class="seg sB"><b style="color:#9dbcff">Ben · Seat 12</b></div><i class="stop"><span>Muntinlupa</span></i><div class="seg sB"></div><i class="stop"><span>Cubao</span></i></div></div></section>
+<div class="line" aria-hidden="true"><i class="stop"><span>Sta. Cruz</span></i><div class="seg sA"></div><i class="stop"><span>Calamba</span></i><div class="seg sB"></div><i class="stop"><span>Muntinlupa</span></i><div class="seg sB"></div><i class="stop"><span>Cubao</span></i></div></div></section>
 <div class="wrap"><form class="panel" id="sf" aria-label="Journey search"><div class="fgrid">
 <label>From<select id="sf-f">${opts(STOPS.slice(0,STOPS.length-1),UI.f)}</select></label>
 <label>To<select id="sf-t">${opts(STOPS.slice(UI.f+1),UI.t,UI.f+1)}</select></label>
