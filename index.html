@@ -761,109 +761,122 @@ addEventListener('storage',e=>{if(e.key===KEY&&e.newValue&&$('#trkinfo')){try{S=
 S.view=['find','routes','track','trips','card','ops'].includes(location.hash.slice(1))?location.hash.slice(1):S.view;render();
 addEventListener('hashchange',()=>{const v=location.hash.slice(1);if(Object.hasOwn(VIEWS,v)&&v!==S.view){S.view=v;render();scrollTo(0,0)}});
 </script>
-<!-- Pinned Supabase client. IMPROVE: self-host or add an integrity hash for production. -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<!-- ===== Local demo authentication: accounts persist in this browser ===== -->
 <script>
 'use strict';
-/* ========= ACCOUNTS: real sign-up / sign-in through Supabase Auth =========
-   SETUP (nothing below works until this is done):
-   1) Create a Supabase project.  2) Authentication > Providers > Email: turn ON "Confirm email".
-   3) Authentication > URL Configuration: add this site's address to Site URL and Redirect URLs.
-   4) Run db/migrations/001_core_schema.sql, then 002_profile_trigger.sql. To give a verified staff member operator access, run db/ops/grant_operator_role.sql for their user.
-   5) Paste the Project URL and the PUBLIC anon key below. NEVER paste the service_role key into this file.
-   Passwords, email verification, sessions and auth rate limits are handled by Supabase, not by this page. */
-const SUPABASE_URL='';       // e.g. https://abcdxyz.supabase.co
-const SUPABASE_ANON_KEY='';  // public anon key only
-const sb=(SUPABASE_URL&&SUPABASE_ANON_KEY&&window.supabase)?window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY):null;
+/* ========= ACCOUNTS: local demo sign-up / sign-in / sign-out =========
+   Accounts and sessions are stored in this browser's localStorage.
+   Demo only: passwords are hashed with SHA-256 and a per-account salt.
+   A production app must use a secure backend and database. */
+const AUTH_DB_KEY='lagona.demo.accounts';
+const AUTH_SESSION_KEY='lagona.demo.session';
 let SESSION=null,PENDING_VIEW=null,NOVERIFY=false,ROLE=null;
 const ad=document.getElementById('authdlg'),acct=document.getElementById('acct');
-const TITLES={signin:'Sign in',signup:'Create your account',forgot:'Reset your password',reset:'Choose a new password',verify:'Check your email',off:'Accounts are not set up yet'};
-const phone=v=>{const d=String(v).replace(/[\s\-()]/g,''),m=/^(?:\+63|63|0)(9\d{9})$/.exec(d);return m?'+63'+m[1]:null};
+const TITLES={signin:'Sign in',signup:'Create your account',forgot:'Reset your password',reset:'Choose a new password',verify:'Check your email',off:'Accounts unavailable'};
 const mailOk=v=>/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);
 const fld=(l,n,t,ex)=>`<label>${l}<input name="${n}" type="${t}" ${ex||''} required></label>`;
 const sub=l=>`<p id="aerr" class="aerr" role="alert"></p><button class="btn t" type="submit" id="asub" data-label="${l}" style="width:100%">${l}</button>`;
+const readDB=()=>{try{return JSON.parse(localStorage.getItem(AUTH_DB_KEY))||{}}catch(_){return{}}};
+const writeDB=db=>localStorage.setItem(AUTH_DB_KEY,JSON.stringify(db));
+const uid=()=>(crypto.randomUUID?crypto.randomUUID():'u_'+Date.now()+'_'+Math.random().toString(36).slice(2));
+async function hashPassword(pw,salt){
+  const data=new TextEncoder().encode(salt+'::'+pw);
+  const digest=await crypto.subtle.digest('SHA-256',data);
+  return Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
 function authBody(mode,msg){
- if(mode==='off')return `${SUPABASE_URL&&!window.supabase?'<p class="note">The Supabase library could not be loaded. Check your connection.</p>':''}<p>Real accounts are not switched on in this copy of the site, so nothing can be created or signed in yet.</p><p class="mut" style="font-size:13px">To turn them on: create a Supabase project, enable "Confirm email", run the SQL files in <code>db/migrations</code>, then put the project URL and public anon key in <code>SUPABASE_URL</code> and <code>SUPABASE_ANON_KEY</code> near the end of this HTML file.</p>`;
- if(mode==='verify')return `<p>${msg}</p><p class="mut" style="font-size:13px">Open the link in the email, then sign in. Check your spam folder if you do not see it.</p><button class="btn t" type="button" data-auth="signin" style="margin-top:8px">Go to sign in</button>`;
- if(mode==='signup')return `<form id="af" novalidate>${fld('Full name','name','text','autocomplete="name" maxlength="120"')}${fld('Email','email','email','autocomplete="email"')}${fld('Mobile number (Philippines)','mobile','tel','autocomplete="tel" placeholder="0917 123 4567" inputmode="tel"')}${fld('Password (10+ characters)','pw','password','autocomplete="new-password"')}${fld('Confirm password','pw2','password','autocomplete="new-password"')}
+ if(mode==='off')return '<p>Accounts are unavailable in this browser because local storage is blocked.</p>';
+ if(mode==='verify')return `<p>${msg}</p><button class="btn t" type="button" data-auth="signin" style="margin-top:8px">Go to sign in</button>`;
+ if(mode==='signup')return `<form id="af" novalidate>${fld('Full name','name','text','autocomplete="name" maxlength="120"')}${fld('Email','email','email','autocomplete="email"')}${fld('Password (8+ characters)','pw','password','autocomplete="new-password"')}${fld('Confirm password','pw2','password','autocomplete="new-password"')}
  <label class="chk"><input type="checkbox" name="terms"><span>I have read and accept the <button class="lnk" type="button" data-doc="Terms and Conditions">Terms and Conditions</button> and <button class="lnk" type="button" data-doc="Privacy Policy">Privacy Policy</button>.</span></label>${sub('Create account')}</form><p class="alinks">Already have an account? <button class="lnk" type="button" data-auth="signin">Sign in</button></p>`;
  if(mode==='forgot')return `<form id="af" novalidate>${fld('Email','email','email','autocomplete="email"')}${sub('Send reset link')}</form><p class="alinks"><button class="lnk" type="button" data-auth="signin">Back to sign in</button></p>`;
- if(mode==='reset')return `<form id="af" novalidate>${fld('New password (10+ characters)','pw','password','autocomplete="new-password"')}${fld('Confirm new password','pw2','password','autocomplete="new-password"')}${sub('Update password')}</form>`;
+ if(mode==='reset')return `<form id="af" novalidate>${fld('New password (8+ characters)','pw','password','autocomplete="new-password"')}${fld('Confirm new password','pw2','password','autocomplete="new-password"')}${sub('Update password')}</form>`;
  return `<form id="af" novalidate>${fld('Email','email','email','autocomplete="email"')}${fld('Password','pw','password','autocomplete="current-password"')}${sub('Sign in')}</form><p class="alinks"><button class="lnk" type="button" data-auth="forgot">Forgot password?</button> · <button class="lnk" type="button" data-auth="signup">Create an account</button></p>`}
-function showAuth(mode,msg){const m=sb?mode:'off';ad.dataset.mode=m;
+function showAuth(mode,msg){const m=mode;ad.dataset.mode=m;
  ad.innerHTML=`<div class="dh"><h3 style="margin:0">${TITLES[m]}</h3><button class="btn g sm" type="button" data-act="authclose">Close</button></div><div class="db">${msg&&m!=='verify'?`<p class="note">${esc(msg)}</p>`:''}${authBody(m,msg)}</div>`;
  if(!ad.open)ad.showModal();const f=ad.querySelector('input');if(f)f.focus()}
 function renderAcct(){if(!acct)return;
  if(SESSION){const n=window.AUTH_NAME||'Account',op=ROLE==='operator_staff'||ROLE==='admin';
   acct.innerHTML=`<b title="${esc(n)}">${esc(n)}</b>${op?`<button class="btn t sm" type="button" data-act="opview">${S.pax==='OP'?'Passenger view':'Operator view'}</button>`:''}<button class="btn sm" type="button" data-act="authout">Sign out</button>`}
  else acct.innerHTML=`<button class="btn sm" type="button" data-auth="signin">Sign in</button><button class="btn t sm" type="button" data-auth="signup">Create account</button>`}
-/* Operator access comes from profiles.role in the database (set manually: db/ops/grant_operator_role.sql). Nobody can pick it themselves.
-   IMPROVE: this only decides which screens are shown. Once trips and reservations live in the database, operator data must be restricted by Row Level Security / server checks too. */
-async function loadRole(){ROLE=null;if(sb&&SESSION){const{data,error}=await sb.from('profiles').select('role').eq('id',SESSION.user.id).maybeSingle();if(!error&&data)ROLE=data.role}
- if(ROLE!=='operator_staff'&&ROLE!=='admin'&&S.pax==='OP'){S.pax='A';if(S.view==='ops')S.view='find';render()}
- renderAcct()}
-function applySession(s){SESSION=s||null;if(!SESSION)ROLE=null;const u=SESSION&&SESSION.user;window.AUTH_NAME=u?((u.user_metadata&&u.user_metadata.full_name)||u.email):null;renderAcct()}
+function loadRole(){ROLE=null;renderAcct()}
+function applySession(s){SESSION=s||null;if(!SESSION)ROLE=null;
+ const u=SESSION&&SESSION.user;window.AUTH_NAME=u?((u.user_metadata&&u.user_metadata.full_name)||u.email):null;renderAcct()}
+function persistSession(user){
+ const session={access_token:uid(),user};
+ localStorage.setItem(AUTH_SESSION_KEY,JSON.stringify(session));
+ applySession(session);afterLogin(PENDING_VIEW);PENDING_VIEW=null;
+}
+function restoreSession(){
+ try{
+  const raw=localStorage.getItem(AUTH_SESSION_KEY);if(!raw)return;
+  const session=JSON.parse(raw),db=readDB(),email=session&&session.user&&session.user.email;
+  if(!session||!email||!db[email])throw new Error('missing');
+  applySession(session);
+ }catch(_){localStorage.removeItem(AUTH_SESSION_KEY);applySession(null)}
+}
 function afterLogin(view){
- if(NOVERIFY){NOVERIFY=false;toast('Warning: email verification is OFF in your Supabase project. Turn on "Confirm email" before launch.')}
- if(view){S.view=view;render();scrollTo(0,0)}else if(dlg.open&&UI.mode==='seat')rSeat()}
-function afterLogout(){S.pax='A';ROLE=null;renderAcct();UI.card=null;UI.seat=null;if(dlg.open)dlg.close();if(S.view==='trips'||S.view==='card'||S.view==='report')S.view='find';render()}
-/* Clicks: capture phase so the booking code never runs for a signed-out visitor. Browsing routes/fares stays open to everyone. */
+ if(view){S.view=view;render();scrollTo(0,0)}else if(dlg.open&&UI.mode==='seat')rSeat();
+}
+function afterLogout(){
+ localStorage.removeItem(AUTH_SESSION_KEY);
+ SESSION=null;ROLE=null;window.AUTH_NAME=null;
+ S.pax='A';renderAcct();UI.card=null;UI.seat=null;
+ if(dlg.open)dlg.close();
+ if(S.view==='trips'||S.view==='card'||S.view==='report')S.view='find';
+ render();
+ toast('You have been signed out.');
+}
 document.addEventListener('click',e=>{const t=e.target.closest('[data-auth],[data-act],[data-doc]');if(!t)return;
  if(t.dataset.auth){e.preventDefault();showAuth(t.dataset.auth);return}
  if(t.dataset.doc){const x=document.getElementById('aerr');if(x)x.textContent=t.dataset.doc+' is not published yet. It must be written and legally reviewed (including Data Privacy Act requirements) before launch.';return}
  const a=t.dataset.act;
  if(a==='authclose'){ad.close();return}
- if(a==='authout'){if(sb)sb.auth.signOut();return}
+ if(a==='authout'){e.preventDefault();e.stopImmediatePropagation();afterLogout();return}
  if(a==='opview'){if(ROLE!=='operator_staff'&&ROLE!=='admin')return;for(const k in S.holds)if(S.holds[k].pax===S.pax)delete S.holds[k];S.pax=S.pax==='OP'?'A':'OP';UI.card=null;UI.seat=null;if(dlg.open)dlg.close();S.view=S.pax==='OP'?'ops':'find';render();renderAcct();return}
- if(!sb||SESSION)return;
+ if(SESSION)return;
  if(a==='book'){e.stopImmediatePropagation();e.preventDefault();showAuth('signin','Sign in or create an account to book this seat. Your seat choice stays on screen, but the hold is short, so it may expire.');return}
  if(a==='nav'&&(t.dataset.v==='trips'||t.dataset.v==='card'||t.dataset.v==='report')){e.stopImmediatePropagation();e.preventDefault();PENDING_VIEW=t.dataset.v;showAuth('signin','Sign in to see your bookings.')}
 },true);
 ad.addEventListener('close',()=>{PENDING_VIEW=null});
-document.addEventListener('submit',async e=>{const f=e.target;if(f.id!=='af')return;e.preventDefault();if(!sb)return;
- const mode=ad.dataset.mode,v=Object.fromEntries(new FormData(f)),err=t=>{document.getElementById('aerr').textContent=t},btn=document.getElementById('asub'),email=(v.email||'').trim().toLowerCase(),limit='Too many attempts. Please wait a few minutes and try again.';
+document.addEventListener('submit',async e=>{const f=e.target;if(f.id!=='af')return;e.preventDefault();
+ const mode=ad.dataset.mode,v=Object.fromEntries(new FormData(f)),err=t=>{document.getElementById('aerr').textContent=t},btn=document.getElementById('asub'),email=(v.email||'').trim().toLowerCase();
  err('');
  try{
-  if(mode==='signup'){const name=(v.name||'').trim(),mob=phone(v.mobile||'');
+  if(mode==='signup'){const name=(v.name||'').trim(),db=readDB();
    if(name.length<2)return err('Enter your full name.');
    if(!mailOk(email))return err('Enter a valid email address.');
-   if(!mob)return err('Enter a valid Philippine mobile number, for example 0917 123 4567.');
-   if((v.pw||'').length<10)return err('Use a password of at least 10 characters.');
+   if((v.pw||'').length<8)return err('Use a password of at least 8 characters.');
    if(v.pw!==v.pw2)return err('The two passwords do not match.');
    if(!v.terms)return err('You must accept the Terms and Privacy Policy to create an account.');
+   if(db[email])return err('An account already exists for this email. Please sign in instead.');
    btn.disabled=true;btn.textContent='Please wait…';
-   const{data,error}=await sb.auth.signUp({email,password:v.pw,options:{emailRedirectTo:location.origin+location.pathname,data:{full_name:name,mobile_ph:mob,terms_accepted:true}}});
-   if(error)return err(error.status===429?limit:'We could not create the account: '+error.message);
-   if(data.session){NOVERIFY=true;return}
-   return showAuth('verify','We sent a verification link to <b>'+esc(email)+'</b>.')}
+   const salt=crypto.getRandomValues(new Uint8Array(16)).join('');
+   const user={id:uid(),email,user_metadata:{full_name:name,terms_accepted:true},created_at:new Date().toISOString()};
+   db[email]={user,password_hash:await hashPassword(v.pw,salt),salt};
+   writeDB(db);persistSession(user);
+   ad.close();
+   toast('Account created successfully. Welcome to LaGOna!');
+   S.view='find';render();scrollTo(0,0);
+   return}
   if(mode==='signin'){if(!mailOk(email)||!v.pw)return err('Enter your email and password.');
    btn.disabled=true;btn.textContent='Please wait…';
-   const{error}=await sb.auth.signInWithPassword({email,password:v.pw});
-   if(error)return err(error.status===429?limit:/not confirmed/i.test(error.message)?'Please verify your email first. Check your inbox for the verification link.':'Incorrect email or password.');
-   return}
+   const db=readDB(),rec=db[email];
+   if(!rec){toast('This account is not yet created. Please create an account first.');return err('No account found for this email. Please create an account first.')}
+   const hash=await hashPassword(v.pw,rec.salt);
+   if(hash!==rec.password_hash)return err('Incorrect email or password.');
+   persistSession(rec.user);toast('Welcome back, '+(rec.user.user_metadata.full_name||email)+'!');return}
   if(mode==='forgot'){if(!mailOk(email))return err('Enter a valid email address.');
-   btn.disabled=true;btn.textContent='Please wait…';
-   const{error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
-   if(error&&error.status===429)return err(limit);
-   return showAuth('verify','If an account exists for <b>'+esc(email)+'</b>, we sent a password reset link.')}
-  if(mode==='reset'){if((v.pw||'').length<10)return err('Use a password of at least 10 characters.');
+   const db=readDB();
+   if(!db[email]){toast('This account is not yet created. Please create an account first.');return err('No account found for this email. Please create an account first.')}
+   return showAuth('verify','Demo mode: password reset email is not available. Use the account you created, or create a new demo account.')}
+  if(mode==='reset'){if((v.pw||'').length<8)return err('Use a password of at least 8 characters.');
    if(v.pw!==v.pw2)return err('The two passwords do not match.');
-   btn.disabled=true;btn.textContent='Please wait…';
-   const{error}=await sb.auth.updateUser({password:v.pw});
-   if(error)return err('Could not update the password: '+error.message);
-   ad.close();toast('Password updated.')}
+   return err('Demo mode: password reset is not available.')}
  }finally{if(btn&&btn.isConnected){btn.disabled=false;btn.textContent=btn.dataset.label}}
 });
 renderAcct();
-if(sb){
- const r=document.getElementById('role');if(r)r.style.display='none'; // demo user/operator switcher is not allowed once real accounts are on
- S.pax='A';save();                                                      // operator tools stay unreachable until real operator accounts exist
- sb.auth.onAuthStateChange((evt,s)=>{applySession(s);if(s)setTimeout(loadRole,0);
-  if(evt==='PASSWORD_RECOVERY'){setTimeout(()=>showAuth('reset'),0);return}
-  if(evt==='SIGNED_IN'&&s&&ad.open&&ad.dataset.mode!=='reset'&&ad.dataset.mode!=='off'){const v=PENDING_VIEW;PENDING_VIEW=null;setTimeout(()=>{ad.close();afterLogin(v)},0)}
-  if(evt==='SIGNED_OUT')setTimeout(afterLogout,0)});
- render();
-}
+restoreSession();
 </script>
 </body>
 </html>
