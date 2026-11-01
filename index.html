@@ -189,12 +189,48 @@ footer{padding-bottom:calc(36px + 72px + env(safe-area-inset-bottom,0px))}
 footer{padding-bottom:calc(36px + 120px + env(safe-area-inset-bottom,0px))}}
 #app{overflow-anchor:none}
 </style>
+<style id="acct-ui">
+/* Account area in the header (next to the bell): Sign in / Create account, or the signed-in account with a sign-out menu */
+.top .tools{gap:10px}
+.acct{position:relative;gap:8px}
+.acctbtn{display:flex;align-items:center;gap:8px;background:var(--navy2);border:1px solid #33509a;color:#fff;border-radius:11px;min-height:40px;padding:4px 12px 4px 5px;font:600 13px var(--f);cursor:pointer;transition:background .15s}
+.acctbtn:hover{background:#1d3f86}
+.acctbtn .av{width:30px;height:30px;border-radius:50%;background:var(--teal);display:grid;place-items:center;font-weight:800;font-size:13px}
+.acctbtn .nm{max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.acct .acctmenu{position:absolute;right:0;top:calc(100% + 10px);min-width:230px;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:14px;box-shadow:var(--sh2);padding:14px;z-index:60;display:flex;flex-direction:column;gap:10px;font-size:14px}
+.acct .acctmenu[hidden]{display:none}
+.acctmenu .who{display:flex;flex-direction:column;gap:3px;align-items:flex-start}
+.acctmenu .who small{color:var(--mut);font-size:12px}
+.acct .acctmenu .who b{display:block;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px}
+.acct .acctmenu .btn{background:var(--red);border-color:var(--red);color:#fff;width:100%}
+.acct .short{display:none}
+@media(max-width:560px){.acct .long{display:none}.acct .short{display:inline}}
+@media(max-width:440px){.brand b{display:none}}
+@media(max-width:720px){
+ .acctbtn .nm{max-width:72px}
+ /* the bottom bar now holds only the page menu, so it is one row again */
+ .dock .wrap{flex-wrap:nowrap;gap:12px;padding-top:6px;padding-bottom:6px}
+ .dock nav{flex:1 1 auto}
+ .toast{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+ footer{padding-bottom:calc(36px + 72px + env(safe-area-inset-bottom,0px))}
+}
+</style>
+<style id="layout-fix">
+/* Pages built as "wrap sec" lost their side padding (.sec's padding shorthand overrode .wrap's), so content touched the screen edges.
+   This restores the same 18px gutters the Find a Bus page has. Applies to Operator, Accident Reports, Passenger Reports, My Bookings, Transit Card, Routes, Track Bus and Report a Problem. */
+.wrap.sec{padding-left:18px;padding-right:18px}
+@media(min-width:721px){.wrap.sec{padding-left:24px;padding-right:24px}}
+@media(max-width:560px){
+ .segrow{grid-template-columns:1fr auto auto;gap:6px 10px}
+ .segrow .segbar{grid-column:1/-1;order:3}
+}
+</style>
 </head>
 <body>
 <a class="skip" href="#app">Skip to content</a>
 <header class="top"><div class="wrap bar">
 <a class="brand" href="#find" data-act="nav" data-v="find"><span class="logo">GO</span><b data-brand>LaGOna</b></a>
-<div class="tools"><select id="role" aria-label="Demo user"><option value="A">Passenger A: Ana</option><option value="B">Passenger B: Ben</option><option value="OP">Operator staff</option></select>
+<div class="tools"><span class="acct" id="acct"></span>
 <button class="ic" id="bell" data-act="bell" aria-label="Notifications">🔔<i id="bc"></i></button></div>
 </div></header>
 <main id="app"></main>
@@ -203,7 +239,7 @@ footer{padding-bottom:calc(36px + 120px + env(safe-area-inset-bottom,0px))}}
 
 <footer><div class="wrap"><b data-brand>LaGOna</b> is a demonstration prototype. Stations, schedules, fares and bus numbers are sample data and are not connected to LLI, HM Transport, DLTB Co. or JAC Liner.
 <p style="margin-top:10px">Contact: support@example.com (placeholder) · Policies: placeholder · <button class="btn sm g" style="color:#fff;border-color:#5b73b5" data-act="reset">Reset demo</button></p></div></footer>
-<div class="dock"><div class="wrap"><nav id="nav" aria-label="Main"></nav><span class="acct" id="acct"></span></div></div>
+<div class="dock"><div class="wrap"><nav id="nav" aria-label="Main"></nav></div></div>
 <dialog id="dlg" aria-label="Booking details"></dialog><dialog id="authdlg" aria-label="Account"></dialog><div id="toast" class="toast" role="status" aria-live="polite"></div>
 <!-- IMPROVE: Third-party assets. Pin and self-host Leaflet/qrcodejs (or add integrity= and crossorigin= attributes),
      and send a Content-Security-Policy header from the server. Generate QR codes on the server for tickets. -->
@@ -265,11 +301,12 @@ const fresh=()=>({pax:'A',view:'find',bookings:[],txs:[],cards:{'450012340001':{
 let S;try{S=Object.assign(fresh(),JSON.parse(localStorage.getItem(KEY))||{})}catch(e){S=fresh()}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
 S.reports=S.reports||[];S.link=S.link||{};for(const k in S.link)if(PAX[k]&&S.cards[S.link[k]])PAX[k].card=S.link[k];
+if(S.pax!=='OP'&&!PAX[S.pax])S.pax='A'; // real accounts re-apply their own identity once the session is restored
 S.txs.forEach(x=>{if(x.status==='Pending')x.status='Failed'}); // page closed mid-payment: nothing was charged
 /* Booking statuses are only: Booked (passenger reserved) > Checked in (passenger paid) > Completed (operator confirmed passenger got off). Older saved statuses are mapped onto these. */
 const LEGACY={'Confirmed':'Checked in','Checked In':'Checked in','Boarded':'Checked in','Approaching Destination':'Checked in','Alighting Pending':'Checked in','Alighted':'Completed'};
 S.bookings=S.bookings.filter(b=>b.status!=='Cancelled');S.bookings.forEach(b=>{if(LEGACY[b.status])b.status=LEGACY[b.status]});
-const who=()=>S.pax==='OP'?'Staff':(window.AUTH_NAME||PAX[S.pax].name); // real signed-in name when accounts are on
+const who=()=>window.AUTH_NAME||(S.pax==='OP'?'Staff':PAX[S.pax].name); // real signed-in name when accounts are on
 const note=(p,t)=>S.notes.unshift({pax:p,text:t,ts:stamp(),read:false});
 const opNote=(t,k)=>S.notes.unshift({pax:'OP',kind:k,text:t,ts:stamp(),read:false}); // update for the operator bell
 const logIt=(action,rec)=>S.log.unshift({ts:stamp(),who:who(),action,rec});
@@ -336,7 +373,7 @@ const VIEWS={find:'Find a Bus',routes:'Routes & Stations',track:'Track Bus',inci
 const navBadge=v=>{const n=v==='incidents'?Object.keys(S.flags).length:v==='inbox'?S.reports.filter(r=>r.status==='Submitted'||r.status==='Under review').length:0;return n?` <i style="font-style:normal;background:var(--red);color:#fff;border-radius:9px;padding:0 7px;font-size:11px">${n}</i>`:''};
 function renderNav(){const ok=S.pax==='OP'?['ops','incidents','inbox','routes','track']:['find','routes','track','trips','report','card'];if(!ok.includes(S.view))S.view=ok[0];
  $('#nav').innerHTML=ok.map(v=>`<button data-act="nav" data-v="${v}" ${S.view===v?'aria-current="page"':''}>${VIEWS[v]}${navBadge(v)}</button>`).join('');
- $('#role').value=S.pax;const c=S.notes.filter(n=>n.pax===S.pax&&!n.read).length;$('#bc').textContent=c||'';$('#bell').style.display=''}
+ const c=S.notes.filter(n=>n.pax===S.pax&&!n.read).length;$('#bc').textContent=c||'';$('#bell').style.display=''}
 function render(){expireOffers();dropMap();renderNav();({report:rReport,inbox:rInbox,incidents:rInci,find:rFind,routes:rRoutes,track:rTrack,trips:rTrips,card:rCard,ops:rOps})[S.view]();document.querySelectorAll('[data-brand]').forEach(e=>e.textContent=BRAND);save()}
 /* ========= FIND A BUS ========= */
 /* IMPROVE:
@@ -744,7 +781,7 @@ const ACT={
  block:()=>{if(!confirm('Block this card? You cannot undo this in the demo.'))return;S.cards[PAX[S.pax].card].status='Blocked';logIt('Card blocked',mask(PAX[S.pax].card));render()},
  company:d=>{UI.op=d.o;S.view='find';render();scrollTo(0,0)},
  bell:()=>{if(S.pax==='OP')return opBell();S.view='trips';render();scrollTo(0,0)},
- reset:()=>{if(!confirm('Reset all demo data?'))return;S=fresh();PAX.A.card='450012340001';PAX.B.card='450012340002';Object.assign(UI,{seat:null,card:null,trip:null,opTrip:null});if(dlg.open)dlg.close();render();toast('Demo reset.')}};
+ reset:()=>{if(!confirm('Reset all demo data?'))return;S=fresh();PAX.A.card='450012340001';PAX.B.card='450012340002';if(window.syncAccount)syncAccount();Object.assign(UI,{seat:null,card:null,trip:null,opTrip:null});if(dlg.open)dlg.close();render();toast('Demo reset.')}};
 document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(b){if(b.tagName==='A')e.preventDefault();ACT[b.dataset.act]?.(b.dataset)}});
 document.addEventListener('change',e=>{const k=e.target.dataset.chg;if(!k)return;if(k==='cat'){UI.cat=e.target.value;rSeat()}if(k==='opTrip'){UI.opTrip=e.target.value;rOps()}if(k==='opDate'){UI.opDate=e.target.value||today();UI.opTrip=null;rOps()}if(k==='opStop'){UI.opStop=+e.target.value;rOps()}if(k==='inc')incSet(e.target.dataset.f,e.target.type==='checkbox'?e.target.checked:e.target.value);if(k==='incseat'&&UI.inc)UI.inc.assign[e.target.dataset.id]=+e.target.value||null;if(k==='trk'){UI.trk=e.target.value;rTrack()}});
 document.addEventListener('input',e=>{if(e.target.id==='prog'){UI.prog=e.target.value/1000;moveBus();return}if(e.target.dataset.inp==='q'){UI.q=e.target.value;const p=e.target.selectionStart;rRoutes();const q=$('#q');q.focus();q.setSelectionRange(p,p)}});
@@ -753,7 +790,7 @@ document.addEventListener('submit',e=>{if(e.target.id!=='sf')return;e.preventDef
  if(!$('#sf-d').value||$('#sf-d').value<today())return $('#sf-msg').textContent='Choose today or a later date.';
  Object.assign(UI,{f,t,date:$('#sf-d').value,time:$('#sf-h').value,op:$('#sf-o').value});res()});
 document.addEventListener('change',e=>{if(e.target.id==='sf-f'){UI.t=+$('#sf-t').value;UI.f=+e.target.value;UI.t=Math.max(UI.t,UI.f+1);const d=$('#sf-d').value;if(d&&d>=today())UI.date=d;UI.time=$('#sf-h').value;UI.op=$('#sf-o').value;rFind()}});
-$('#role').addEventListener('change',e=>{for(const k in S.holds)if(S.holds[k].pax===S.pax)delete S.holds[k];S.pax=e.target.value;if(S.pax==='OP')S.view='ops';UI.card=null;UI.seat=null;if(dlg.open)dlg.close();render()});
+
 dlg.addEventListener('close',()=>{if(UI.mode==='seat'){for(const k in S.holds)if(S.holds[k].pax===S.pax)delete S.holds[k];UI.seat=null;save();if(S.view==='find')res()}UI.mode=''});
 /* seat-hold countdown: expired holds are released automatically */
 setInterval(()=>{if(!dlg.open||UI.mode!=='seat')return;sweep();const h=$('#hold');if(UI.seat&&!S.holds[hk(tripById(UI.trip),UI.seat)]){UI.seat=null;toast('Seat hold expired and was released.');rSeat()}else if(h){const x=S.holds[hk(tripById(UI.trip),UI.seat)];h.textContent=Math.max(0,Math.round((x.exp-Date.now())/1000))}},1000);
@@ -788,6 +825,7 @@ function authBody(mode,msg){
  if(mode==='off')return '<p>Accounts are unavailable in this browser because local storage is blocked.</p>';
  if(mode==='verify')return `<p>${msg}</p><button class="btn t" type="button" data-auth="signin" style="margin-top:8px">Go to sign in</button>`;
  if(mode==='signup')return `<form id="af" novalidate>${fld('Full name','name','text','autocomplete="name" maxlength="120"')}${fld('Email','email','email','autocomplete="email"')}${fld('Password (8+ characters)','pw','password','autocomplete="new-password"')}${fld('Confirm password','pw2','password','autocomplete="new-password"')}
+ <label>Account type<select name="role"><option value="passenger">Passenger (book and ride)</option><option value="operator">Operator staff (manage trips)</option></select></label><p class="mut" style="font-size:12px;margin:6px 0 0">Passenger and operator accounts are separate and see different pages. In a real system, operator accounts are issued by an administrator.</p>
  <label class="chk"><input type="checkbox" name="terms"><span>I have read and accept the <button class="lnk" type="button" data-doc="Terms and Conditions">Terms and Conditions</button> and <button class="lnk" type="button" data-doc="Privacy Policy">Privacy Policy</button>.</span></label>${sub('Create account')}</form><p class="alinks">Already have an account? <button class="lnk" type="button" data-auth="signin">Sign in</button></p>`;
  if(mode==='forgot')return `<form id="af" novalidate>${fld('Email','email','email','autocomplete="email"')}${sub('Send reset link')}</form><p class="alinks"><button class="lnk" type="button" data-auth="signin">Back to sign in</button></p>`;
  if(mode==='reset')return `<form id="af" novalidate>${fld('New password (8+ characters)','pw','password','autocomplete="new-password"')}${fld('Confirm new password','pw2','password','autocomplete="new-password"')}${sub('Update password')}</form>`;
@@ -796,35 +834,61 @@ function showAuth(mode,msg){const m=mode;ad.dataset.mode=m;
  ad.innerHTML=`<div class="dh"><h3 style="margin:0">${TITLES[m]}</h3><button class="btn g sm" type="button" data-act="authclose">Close</button></div><div class="db">${msg&&m!=='verify'?`<p class="note">${esc(msg)}</p>`:''}${authBody(m,msg)}</div>`;
  if(!ad.open)ad.showModal();const f=ad.querySelector('input');if(f)f.focus()}
 function renderAcct(){if(!acct)return;
- if(SESSION){const n=window.AUTH_NAME||'Account',op=ROLE==='operator_staff'||ROLE==='admin';
-  acct.innerHTML=`<b title="${esc(n)}">${esc(n)}</b>${op?`<button class="btn t sm" type="button" data-act="opview">${S.pax==='OP'?'Passenger view':'Operator view'}</button>`:''}<button class="btn sm" type="button" data-act="authout">Sign out</button>`}
- else acct.innerHTML=`<button class="btn sm" type="button" data-auth="signin">Sign in</button><button class="btn t sm" type="button" data-auth="signup">Create account</button>`}
+ if(SESSION){const n=window.AUTH_NAME||'Account',op=ROLE==='operator_staff';
+  acct.innerHTML=`<button class="acctbtn" type="button" data-act="acctmenu" aria-haspopup="true" aria-expanded="false" title="Signed in as ${esc(n)}"><span class="av" aria-hidden="true">${esc(n.trim().charAt(0).toUpperCase()||'?')}</span><span class="nm">${esc(n)}</span><span aria-hidden="true">▾</span></button><div class="acctmenu" id="acctmenu" role="menu" hidden><div class="who"><small>Signed in as</small><b>${esc(n)}</b><span class="badge ${op?'o':'b'}">${op?'Operator staff':'Passenger'}</span></div><button class="btn sm" type="button" role="menuitem" data-act="authout">Sign out</button></div>`}
+ else acct.innerHTML=`<button class="btn sm" type="button" data-auth="signin">Sign in</button><button class="btn t sm" type="button" data-auth="signup"><span class="long">Create account</span><span class="short">Sign up</span></button>`}
+function setMenu(open){const m=document.getElementById('acctmenu'),b=acct&&acct.querySelector('.acctbtn');if(!m)return;const o=open===undefined?m.hidden:open;m.hidden=!o;if(b)b.setAttribute('aria-expanded',String(o))}
+document.addEventListener('click',e=>{const m=document.getElementById('acctmenu');if(m&&!m.hidden&&!e.target.closest('#acct'))setMenu(false)});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')setMenu(false)});
 function loadRole(){ROLE=null;renderAcct()}
-function applySession(s){SESSION=s||null;if(!SESSION)ROLE=null;
- const u=SESSION&&SESSION.user;window.AUTH_NAME=u?((u.user_metadata&&u.user_metadata.full_name)||u.email):null;renderAcct()}
+/* Passenger and operator accounts are separate. The account's type decides which interface is shown:
+   operator staff -> S.pax 'OP' (operator pages); passenger -> their own pax key with their own bookings and transit card. */
+function syncAccount(){
+ const old=S.pax,u=SESSION&&SESSION.user;
+ for(const k in S.holds)if(S.holds[k].pax===old)delete S.holds[k];
+ if(!u){ROLE=null;S.pax='A';return}
+ ROLE=(u.user_metadata&&u.user_metadata.role==='operator')?'operator_staff':'passenger';
+ if(ROLE==='operator_staff'){S.pax='OP';return}
+ const key='U'+String(u.id).replace(/[^a-z0-9]/gi,'').slice(0,10),P=PAX[key]||(PAX[key]={});
+ P.name=window.AUTH_NAME||'Passenger';
+ let card=S.link[key]||P.card;
+ if(!card)card='45009'+String(hash(String(u.id))%10000000).padStart(7,'0');
+ while(S.cards[card]&&S.cards[card].owner!==key)card=String(Number(card)+1);
+ if(!S.cards[card])S.cards[card]={owner:key,bal:0,status:'Active'};
+ P.card=card;S.link[key]=card;S.pax=key}
+function applySession(s){SESSION=s||null;const u=SESSION&&SESSION.user;
+ window.AUTH_NAME=u?((u.user_metadata&&u.user_metadata.full_name)||u.email):null;
+ syncAccount();renderAcct()}
 function persistSession(user){
- const session={access_token:uid(),user};
+ const session={access_token:uid(),user},v=PENDING_VIEW;
  localStorage.setItem(AUTH_SESSION_KEY,JSON.stringify(session));
- applySession(session);afterLogin(PENDING_VIEW);PENDING_VIEW=null;
+ PENDING_VIEW=null;if(ad.open)ad.close();
+ applySession(session);afterLogin(v);
 }
 function restoreSession(){
+ let session=null;
  try{
-  const raw=localStorage.getItem(AUTH_SESSION_KEY);if(!raw)return;
-  const session=JSON.parse(raw),db=readDB(),email=session&&session.user&&session.user.email;
-  if(!session||!email||!db[email])throw new Error('missing');
-  applySession(session);
- }catch(_){localStorage.removeItem(AUTH_SESSION_KEY);applySession(null)}
+  const raw=localStorage.getItem(AUTH_SESSION_KEY);
+  if(raw){session=JSON.parse(raw);const db=readDB(),email=session&&session.user&&session.user.email;
+   if(!session||!email||!db[email])throw new Error('missing');
+   session.user=db[email].user}
+ }catch(_){localStorage.removeItem(AUTH_SESSION_KEY);session=null}
+ applySession(session);
+ if(!SESSION&&['trips','card','report'].includes(S.view))S.view='find';
+ render();
 }
 function afterLogin(view){
- if(view){S.view=view;render();scrollTo(0,0)}else if(dlg.open&&UI.mode==='seat')rSeat();
+ UI.card=null;UI.seat=null;
+ if(S.pax==='OP'){if(dlg.open)dlg.close();S.view='ops';render();scrollTo(0,0);return}
+ if(view){S.view=view;render();scrollTo(0,0)}else{render();if(dlg.open&&UI.mode==='seat')rSeat()}
 }
 function afterLogout(){
  localStorage.removeItem(AUTH_SESSION_KEY);
- SESSION=null;ROLE=null;window.AUTH_NAME=null;
- S.pax='A';renderAcct();UI.card=null;UI.seat=null;
+ for(const k in S.holds)if(S.holds[k].pax===S.pax)delete S.holds[k];
+ SESSION=null;window.AUTH_NAME=null;syncAccount();setMenu(false);renderAcct();
+ UI.card=null;UI.seat=null;UI.opTrip=null;UI.inc=null;UI.rp=null;
  if(dlg.open)dlg.close();
- if(S.view==='trips'||S.view==='card'||S.view==='report')S.view='find';
- render();
+ S.view='find';render();scrollTo(0,0);
  toast('You have been signed out.');
 }
 document.addEventListener('click',e=>{const t=e.target.closest('[data-auth],[data-act],[data-doc]');if(!t)return;
@@ -833,8 +897,9 @@ document.addEventListener('click',e=>{const t=e.target.closest('[data-auth],[dat
  const a=t.dataset.act;
  if(a==='authclose'){ad.close();return}
  if(a==='authout'){e.preventDefault();e.stopImmediatePropagation();afterLogout();return}
- if(a==='opview'){if(ROLE!=='operator_staff'&&ROLE!=='admin')return;for(const k in S.holds)if(S.holds[k].pax===S.pax)delete S.holds[k];S.pax=S.pax==='OP'?'A':'OP';UI.card=null;UI.seat=null;if(dlg.open)dlg.close();S.view=S.pax==='OP'?'ops':'find';render();renderAcct();return}
+ if(a==='acctmenu'){e.preventDefault();setMenu();return}
  if(SESSION)return;
+ if(a==='bell'){e.stopImmediatePropagation();e.preventDefault();showAuth('signin','Sign in to see your notifications.');return}
  if(a==='book'){e.stopImmediatePropagation();e.preventDefault();showAuth('signin','Sign in or create an account to book this seat. Your seat choice stays on screen, but the hold is short, so it may expire.');return}
  if(a==='nav'&&(t.dataset.v==='trips'||t.dataset.v==='card'||t.dataset.v==='report')){e.stopImmediatePropagation();e.preventDefault();PENDING_VIEW=t.dataset.v;showAuth('signin','Sign in to see your bookings.')}
 },true);
@@ -852,12 +917,12 @@ document.addEventListener('submit',async e=>{const f=e.target;if(f.id!=='af')ret
    if(db[email])return err('An account already exists for this email. Please sign in instead.');
    btn.disabled=true;btn.textContent='Please wait…';
    const salt=crypto.getRandomValues(new Uint8Array(16)).join('');
-   const user={id:uid(),email,user_metadata:{full_name:name,terms_accepted:true},created_at:new Date().toISOString()};
+   const user={id:uid(),email,user_metadata:{full_name:name,terms_accepted:true,role:v.role==='operator'?'operator':'passenger'},created_at:new Date().toISOString()};
    db[email]={user,password_hash:await hashPassword(v.pw,salt),salt};
    writeDB(db);persistSession(user);
    ad.close();
    toast('Account created successfully. Welcome to LaGOna!');
-   S.view='find';render();scrollTo(0,0);
+   S.view=S.pax==='OP'?'ops':'find';render();scrollTo(0,0);
    return}
   if(mode==='signin'){if(!mailOk(email)||!v.pw)return err('Enter your email and password.');
    btn.disabled=true;btn.textContent='Please wait…';
@@ -878,5 +943,289 @@ document.addEventListener('submit',async e=>{const f=e.target;if(f.id!=='af')ret
 renderAcct();
 restoreSession();
 </script>
+<!-- ===== LaGOna Help Assistant: built in, answers only from this website's own info and guides users click by click ===== -->
+<style id="lg-css">
+[hidden]{display:none!important}
+.lg-fab{position:fixed;right:16px;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:60;display:flex;align-items:center;gap:8px;border:0;border-radius:99px;padding:12px 18px 12px 14px;background:linear-gradient(180deg,#13b8a1,#0f9d8a);color:#fff;font:700 14px var(--f);box-shadow:0 10px 26px rgba(15,157,138,.45),0 2px 6px rgba(11,31,74,.25);cursor:pointer;transition:transform .15s,box-shadow .15s}
+.lg-fab:hover{transform:translateY(-2px);box-shadow:0 14px 30px rgba(15,157,138,.5)}
+.lg-fab span{font-size:20px;line-height:1}
+.lg-panel{position:fixed;right:16px;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:61;width:min(392px,calc(100vw - 24px));height:min(590px,calc(100dvh - 190px));display:flex;flex-direction:column;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:20px;box-shadow:var(--sh2);overflow:hidden;animation:lgpop .2s ease}
+@keyframes lgpop{from{opacity:0;transform:translateY(10px) scale(.98)}}
+.lg-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 14px 13px 16px;background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff}
+.lg-head b{display:block;font-size:15px}.lg-head small{display:block;font-size:11.5px;color:#c9d4f0}
+.lg-head button{background:rgba(255,255,255,.14);border:0;color:#fff;width:34px;height:34px;border-radius:10px;font-size:15px;cursor:pointer}
+.lg-head button:hover{background:rgba(255,255,255,.25)}
+.lg-log{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;background:var(--bg);overscroll-behavior:contain}
+.lg-m{max-width:90%;padding:10px 13px;border-radius:14px;font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+.lg-m.bot{background:var(--card);border:1px solid var(--line);border-top-left-radius:4px;align-self:flex-start}
+.lg-m.me{background:#0b7f70;color:#fff;border-top-right-radius:4px;align-self:flex-end}
+.lg-m .lg-sm{display:block;margin-top:6px;font-size:12px;color:var(--mut)}
+.lg-m .lg-row{padding:3px 0;border-top:1px solid var(--line);font-size:13.5px}.lg-m .lg-row:first-of-type{border-top:0}
+.lg-chips{display:flex;flex-wrap:wrap;gap:6px;max-width:96%}
+.lg-chips button{font:600 12.5px var(--f);color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:99px;padding:7px 12px;cursor:pointer;text-align:left}
+.lg-chips button:hover{border-color:var(--teal);color:var(--teal)}
+.lg-go{font:700 13px var(--f);background:var(--teal);color:#fff;border:0;border-radius:10px;padding:8px 13px;cursor:pointer}
+.lg-go:hover{background:#0d8f7d}
+.lg-form{display:flex;gap:8px;padding:10px;border-top:1px solid var(--line);background:var(--card)}
+.lg-form input{flex:1;min-width:0}
+.lg-foot{font-size:11px;color:var(--mut);text-align:center;padding:0 10px 8px;background:var(--card)}
+.lg-tip{position:fixed;z-index:90;width:min(292px,calc(100vw - 16px));background:var(--navy);color:#fff;border:2px solid var(--yel);border-radius:14px;padding:12px 14px;box-shadow:0 14px 40px rgba(3,10,30,.5);font-size:13.5px;line-height:1.45}
+.lg-th{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--yel);margin-bottom:4px}
+.lg-tb{display:flex;gap:8px;margin-top:10px}
+.lg-tb button{font:700 12.5px var(--f);border-radius:9px;padding:7px 11px;cursor:pointer;border:1px solid #5b73b5;background:transparent;color:#fff}
+.lg-tb button:first-child{background:var(--yel);border-color:var(--yel);color:#3a2d00}
+.lg-tb button:hover{filter:brightness(1.12)}
+.lg-hl{outline:3px solid #f4c430!important;outline-offset:3px;animation:lgpulse 1.3s ease-in-out infinite}
+@keyframes lgpulse{0%,100%{box-shadow:0 0 0 0 rgba(244,196,48,.7)}50%{box-shadow:0 0 0 11px rgba(244,196,48,0)}}
+body.lg-chat .lg-tip{display:none}
+@media(max-width:720px){.lg-fab{bottom:calc(84px + env(safe-area-inset-bottom,0px));padding:12px 16px 12px 12px}
+.lg-panel{left:8px;right:8px;width:auto;top:calc(70px + env(safe-area-inset-top,0px));bottom:calc(8px + env(safe-area-inset-bottom,0px));height:auto;z-index:70}}
+@media(prefers-reduced-motion:reduce){.lg-panel,.lg-hl{animation:none!important}}
+</style>
+
+<button id="lgFab" class="lg-fab" type="button" data-cb="open" aria-label="Open the LaGOna help assistant" aria-expanded="false"><span aria-hidden="true">💬</span><b>Ask LaGOna</b></button>
+<section id="lgPanel" class="lg-panel" role="dialog" aria-label="LaGOna help assistant" hidden>
+ <div class="lg-head"><div><b>LaGOna Assistant</b><small>Answers from this website's info only</small></div><button type="button" data-cb="close" aria-label="Close assistant">✕</button></div>
+ <div id="lgLog" class="lg-log" role="log" aria-live="polite"></div>
+ <form id="lgForm" class="lg-form" autocomplete="off"><input id="lgIn" type="text" maxlength="200" placeholder="Ask anything, e.g. “Where do I top up?”" aria-label="Your question"><button class="btn t" type="submit">Send</button></form>
+ <div class="lg-foot">Demo data only. Not connected to real bus operators.</div>
+</section>
+<div id="lgTip" class="lg-tip" role="status" aria-live="polite" hidden></div>
+
+<script>
+(function(){
+'use strict';
+/* Uses the site's own data (STOPS, OPS, FARE, DISC, fare(), stopTime(), VIEWS, S ...). It never calls an outside service,
+   so it can only answer what this website contains. Anything else gets the "not included" reply. */
+const $1=(s,r=document)=>r.querySelector(s);
+const nrm=s=>String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9%\s]/g,' ').replace(/\s+/g,' ').trim();
+const signedIn=()=>{try{return !!SESSION}catch(e){return false}};
+const fab=$1('#lgFab'),panel=$1('#lgPanel'),log=$1('#lgLog'),inp=$1('#lgIn'),tip=$1('#lgTip');
+const LAST=STOPS.length-1;
+const hm=m=>{const h=Math.floor(m/60),r=m%60;return(h?h+' h ':'')+r+' min'};
+
+/* ---------- stop recognition (names and common nicknames) ---------- */
+const ALIAS=[];STOPS.forEach((s,i)=>ALIAS.push([nrm(s.n),i]));
+[['sta cruz','Sta. Cruz'],['santa cruz','Sta. Cruz'],['quezon city','Quezon City (Cubao)'],['cubao','Quezon City (Cubao)'],['qc','Quezon City (Cubao)'],['alabang','Muntinlupa'],['losbanos','Los Baños'],['sta rosa','Santa Rosa'],['pasay','Pasay (Buendia)'],['buendia','Pasay (Buendia)']].forEach(([a,nm])=>{const i=IX(nm);if(i>=0)ALIAS.push([a,i])});
+function stopsIn(n){const hits=[];for(const[a,i]of ALIAS){const m=new RegExp('\\b'+a+'\\b').exec(n);if(m&&!hits.some(h=>h.i===i))hits.push({i,p:m.index})}
+ let r=hits.sort((x,y)=>x.p-y.p).map(h=>h.i);if(r.length>1&&/\bto\b.*\bfrom\b/.test(n))r=r.reverse();return r}
+const FILLER=new Set('where is what about tell me the a an at in of to from stop stops station terminal info information located location show saan nasaan ang ba po ng sa find go going how far get do i my bus buses route and for'.split(' '));
+function leftover(n){let t=n;for(const[a]of ALIAS)t=t.replace(new RegExp('\\b'+a+'\\b','g'),' ');return t.split(' ').filter(w=>w&&!FILLER.has(w))}
+
+/* ---------- answer builders ---------- */
+const opLine=o=>`<div class="lg-row"><b>${esc(o.id)}</b> (${esc(o.type.trim())}) · departs ${o.times.join(', ')}</div>`;
+const fareLines=(f,t)=>OPS.map(o=>`<div class="lg-row"><b>${esc(o.id)}</b> (${esc(o.type.trim())}): ${peso(fare(o,f,t,'Regular').total)} · student/senior/PWD ${peso(fare(o,f,t,'Student').total)}</div>`).join('');
+function tripSummary(st){const[f,t]=st;
+ if(t<f)return`In this prototype buses run one way, <b>${esc(STOPS[0].n)} → ${esc(STOPS[LAST].n)}</b>, so the site can't search <b>${esc(STOPS[f].n)} → ${esc(STOPS[t].n)}</b>. The two stops are ${STOPS[f].km-STOPS[t].km} km apart.`;
+ const km=STOPS[t].km-STOPS[f].km;
+ return`<b>${esc(STOPS[f].n)} → ${esc(STOPS[t].n)}</b> · ${km} km · about ${hm(Math.round(km*MPK))} (estimated)<br><span class="lg-sm">Sample fares:</span>${fareLines(f,t)}<span class="lg-sm">Estimated times (leave → arrive):</span>${OPS.map(o=>`<div class="lg-row"><b>${esc(o.id)}</b>: ${o.times.map(tm=>stopTime({time:tm},f)+' → '+stopTime({time:tm},t)).join(' · ')}</div>`).join('')}<span class="lg-sm">All figures are sample data.</span>`}
+function stopInfo(i){const s=STOPS[i];
+ return`<b>${esc(s.n)}</b> (${esc(s.m)}) is stop ${i+1} of ${STOPS.length} on the sample route, ${s.km} km from ${esc(STOPS[0].n)}.${i>0?` Before it: ${esc(STOPS[i-1].n)}.`:''}${i<LAST?` After it: ${esc(STOPS[i+1].n)}.`:' It is the last stop.'}<span class="lg-sm">Sample bus times at this stop:</span>${OPS.map(o=>`<div class="lg-row"><b>${esc(o.id)}</b>: ${o.times.map(tm=>stopTime({time:tm},i)).join(', ')}</div>`).join('')}<span class="lg-sm">Address, hours and landmarks are placeholders (not verified).</span>`}
+const mults=OPS.map(o=>`${esc(o.id)} ×${o.mult}`).join(', ');
+const ABOUT=`I'm the LaGOna assistant. I answer questions about this website and can show you exactly where to click. Try asking about <b>booking a seat</b>, <b>fares and discounts</b>, <b>schedules</b>, <b>routes and stops</b>, the <b>transit card</b>, <b>tracking</b>, <b>reports</b> or <b>accounts</b>.<span class="lg-sm">LaGOna is a demonstration prototype. Stations, schedules, fares and bus numbers are sample data.</span>`;
+const OOS=`Sorry, that is not included in the range of this website's info/data presented. I can only help with what is on LaGOna: booking seats, fares and discounts, schedules, routes and stops, the transit card, bus tracking, problem reports and accounts.`;
+const DEF=['How do I book a seat?','How much is the fare?','Where is Track Bus?','Where can I top up my card?','How do I report a problem?','Which bus companies are available?'];
+
+/* ---------- intents: first match wins ties, so order matters ---------- */
+const I=[
+{id:'seathold',kw:[/\bseat colou?rs?\b/,/\byellow\b/,/\bheld\b/,/\bholds?\b/,/\bholding\b/,/\bexpire[sd]?\b/,/\bdriver\b.*\bseat\b|\bseat\b.*\bdriver\b/,/\bseat 1\b/,/\bgreen seat/,/\bawaiting exit\b/,/\bseat (map|plan|layout)\b/,/\blegend\b/],guide:'book',
+ a:()=>`Seat colors: <b>green</b> = available, <b>blue</b> = yours, <b>red</b> = occupied, <b>yellow</b> = held by someone else or waiting for the previous rider's exit. Seat 1 is the driver seat and can't be booked. A seat you tap is held for you for <b>${HOLD_SEC} seconds</b>, so book before the timer ends. Tap a yellow seat to be notified when it is ready.`},
+{id:'operators',kw:[/\b(bus )?compan(y|ies)\b/,/\blli\b/,/\bhm transport\b/,/\bdltb\b/,/\bjac\b/,/\bliner\b/,/\bwhich (bus|buses)\b/,/\baircon\b/,/\bordinary\b/,/\bdeluxe\b/,/\bbus types?\b/,/\bwho operates\b/],guide:'routes',
+ a:()=>`The sample bus companies are:${OPS.map(opLine).join('')}<span class="lg-sm">Sample data only. These companies are not connected to this prototype.</span>`},
+{id:'availability',kw:[/\bavailab/,/\bhow many seats\b/,/\bseats? left\b/,/\bfull\b/,/\bsold out\b/,/\bvacant\b/,/\bupuan pa\b/],guide:'search',
+ a:()=>`Search results show how many seats are free for <i>your</i> segment, with a badge: <b>Open</b>, <b>Almost full</b> (6 or fewer), <b>Full</b>, <b>Departed</b> or <b>Not available</b> (bus out of service). A seat can be reused by another rider on a different segment only after the first rider's exit is confirmed. Run a search to see the counts.`},
+{id:'stationdir',kw:[/\bdirectory\b/,/\bsearch (a )?stations?\b/,/\bfind (a )?station\b/,/\bstation (address|hours|info|details)\b/,/\baddress\b/,/\bopening hours\b/,/\blandmarks?\b/],guide:'stations',
+ a:()=>`The <b>Station directory</b> (on Routes & Stations) lets you search stops by name or city. Station addresses, opening hours and landmarks are placeholders and not verified yet.`},
+{id:'search',kw:[/\bfind (a |the )?(bus|trip)/,/\bsearch (for )?(a |the )?(bus|trip|buses)/,/\bsearch (form|button)\b/,/\bhanap\b/],guide:'search',
+ a:()=>`To find a bus: open <b>Find a Bus</b>, choose <b>From</b>, <b>To</b> and <b>Date</b> (time of day and company are optional), then press <b>Search buses</b>. Each result shows departure, fare and seats free for your segment. This prototype allows 1 passenger per booking.`},
+{id:'mybookings',kw:[/\bmy bookings?\b/,/\bbookings\b/,/\bbooking status\b/,/\bchecked in\b/,/\b(booking|trip|payment|transaction) history\b/,/\bmy trips?\b/],guide:'bookings',
+ a:()=>`<b>My Bookings</b> lists your trips and notifications. Status flow: <b>Booked</b> (seat reserved) → <b>Checked in</b> (paid) → <b>Completed</b> (the operator confirmed you got off). You must be signed in.`},
+{id:'book',kw:[/\bbook/,/\breserv/,/\bmag ?book\b/,/\bbuy (a )?ticket/,/\bget (a )?ticket/,/\b(pick|choose|select) (a |my )?seats?\b/,/\bseats?\b/,/\bupuan\b/,/\bsakay\b/],guide:'book',
+ a:()=>`To book a seat:<br>1. Open <b>Find a Bus</b>, set From, To and Date, press <b>Search buses</b>.<br>2. Press <b>Select seat</b> on a trip and tap a green seat.<br>3. Choose your passenger type and press <b>Book seat</b> (you must be signed in).<br>4. Open <b>My Bookings</b> and press <b>Pay & check in</b> to get your QR ticket.`},
+{id:'discount',kw:[/\bdiscounts?\b/,/\bstudents?\b/,/\bseniors?\b/,/\bpwd\b/,/\bvalid id\b/,/\b20 ?%/,/\bdiskwento\b/,/\bpassenger type\b/],guide:'book',
+ a:()=>`Student, Senior and PWD passengers get <b>${Math.round(DISC*100)}% off</b> the base fare. Choose your passenger type when you pick a seat, and show a valid ID when boarding. (Sample fare rule, not official.)`},
+{id:'fare',kw:[/\bfares?\b/,/\bprices?\b/,/\bcosts?\b/,/\bhow much\b/,/\bmagkano\b/,/\bpamasahe\b/,/\brates?\b/,/\bpesos?\b/,/\bticket price\b/,/\bcharged?\b/,/\bminimum\b/],guide:'search',
+ a:()=>`Fares are sample values: ${peso(FARE.base)} + ${peso(FARE.perKm)} per km, minimum ${peso(FARE.min)}, multiplied by each company's factor (${mults}). Student, Senior and PWD get ${Math.round(DISC*100)}% off. Tell me two stops, for example “fare from Sta. Cruz to Cubao”, and I'll work it out.`},
+{id:'schedule',kw:[/\bschedules?\b/,/\bdepart/,/\bwhat time\b/,/\btime\b/,/\boras\b/,/\bleaves?\b/,/\barriv/,/\bhow long\b/,/\btravel time\b/,/\bduration\b/,/\bgaano katagal\b/,/\bfirst (bus|trip)\b/,/\blast (bus|trip)\b/,/\bbiyahe\b/],guide:'search',
+ a:()=>`Sample departures from ${esc(STOPS[0].n)}:${OPS.map(opLine).join('')}<span class="lg-sm">Times at other stops are estimates (about ${MPK} min per km). Give me two stops, like “Calamba to Cubao”, for estimated times at your stops.</span>`},
+{id:'topup',kw:[/\btop ?up\b/,/\bload\b/,/\breload\b/,/\badd (money|balance|funds)\b/,/\bmag ?load\b/,/\bmagdagdag\b/],guide:'topup',
+ a:()=>`Open <b>Transit Card</b> and press +₱100, +₱200 or +₱500. Top-ups are simulated, so no real money moves. You must be signed in.`},
+{id:'blockcard',kw:[/\blost (my )?card\b/,/\bblock/,/\bstolen\b/,/\bnawala\b.*\bcard\b/],guide:'blockcard',
+ a:()=>`On <b>Transit Card</b>, press “Report lost / block card”. A blocked card can't pay, and in this demo it can't be unblocked (staff would reissue it in a real system).`},
+{id:'linkcard',kw:[/\blink\b/,/\bregister (a |my |the )?card\b/,/\badd (a |my )?card\b/,/\bnew card\b/,/\bcard number\b/,/\bnfc\b/,/\bdemo cards?\b/,/\btap (my |the )?card\b/,/\b4500\b/],guide:'linkcard',
+ a:()=>`On <b>Transit Card</b>, type your card number (at least 8 digits) under “Link a card” and press <b>Link</b>. A card linked to another passenger can't be used. Demo cards: 4500 1234 0001 and 4500 1234 0002.`},
+{id:'pay',kw:[/\bpay\b/,/\bpayments?\b/,/\bpaid\b/,/\bcheck ?in\b/,/bayad/,/\bgcash\b/,/\bmaya\b/,/\bpaymongo\b/,/\bcredit\b/,/\bdebit\b/,/\bcash\b/],guide:'pay',
+ a:()=>`You pay from <b>My Bookings</b>: press <b>Pay & check in</b> on your booking. The fare is taken once from your transit card (simulated, no real money). GCash, Maya and bank payments are not available on this site yet. If your balance is too low, top up first.`},
+{id:'card',kw:[/\bcards?\b/,/\btransit\b/,/\bbalance\b/,/\bwallet\b/],guide:'card',
+ a:()=>`The <b>Transit Card</b> page is your prototype wallet: see your balance and transactions, top up, link a card, or block a lost card. You pay for bookings from it. Demo cards: 4500 1234 0001 and 0002.`},
+{id:'ticket',kw:[/\bqr\b/,/\btickets?\b/,/\breceipts?\b/,/\bresibo\b/,/\bprint/,/\bdownload/,/\be ticket\b/,/\bboarding pass\b/,/\bpdf\b/],guide:'receipt',
+ a:()=>`After paying, press <b>Ticket & receipt</b> in My Bookings. You get a QR ticket to show staff when boarding and a receipt with reference numbers. You can print it or save it as PDF (“Email receipt” is only a placeholder).`},
+{id:'cancel',kw:[/\bcancel/,/\brefund/,/\bundo\b/,/\bkansel\b/,/\bibalik\b/],guide:'cancel',
+ a:()=>`You can cancel from <b>My Bookings</b> only while the booking is unpaid (status Booked); the seat is then released. Paid bookings can't be cancelled in this prototype. If a bus is taken out of service and you decline the transfer offer, your paid fare returns to your transit card.`},
+{id:'gettingoff',kw:[/\bgetting off\b/,/\bget off\b/,/\balight/,/\bexit\b/,/\bbababa\b/,/\bbaba\b/,/\bmy stop\b/,/\bdrop ?off\b/],guide:'gettingoff',
+ a:()=>`When you're about to get off, open <b>My Bookings</b> and press <b>I'm getting off</b> (only on paid, checked-in bookings). The operator is told, and staff mark your trip <b>Completed</b> once you've left, which frees the seat for the next rider.`},
+{id:'notif',kw:[/\bnotif/,/\bbell\b/,/\balerts?\b/,/\babiso\b/,/\bnotified\b/],guide:'bell',
+ a:()=>`Tap the 🔔 bell at the top right. Passengers see updates such as payments, transfer offers, delays and replies to reports in <b>My Bookings</b> under Notifications.`},
+{id:'opincident',kw:[/\baccident reports?\b/,/\bfile (an? )?(incident|accident)\b/,/\bnew (incident|report)\b/,/\bmechanical\b/,/\bbreakdown\b/,/\breopen\b/,/\bclose (the )?(bus|report)\b/,/\breplacement bus\b/,/\btransfer passengers\b/,/\bout of service\b/],guide:'incidents',
+ a:()=>`Operators use <b>Accident Reports</b>: choose the date, bus, type (Mechanical or Accident) and nearest stop, describe what happened, optionally pick a replacement bus and seats, then send. Passengers are notified and the bus is closed to new bookings until it is reopened. For emergencies call 911; this page can't call for help.`},
+{id:'transfer',kw:[/\btransfers?\b/,/\boffer\b/,/\bdecline\b/,/\baccept\b/,/\bbus (broke|broken|breakdown)\b/,/\bnasira\b/,/\bsira\b/,/\banother bus\b/],guide:'bookings',
+ a:()=>`If a bus has a mechanical problem, the operator may offer you a seat on another bus. You get a notification and an offer in <b>My Bookings</b>. <b>Accept</b> and your payment carries over; <b>Decline</b> and your booking ends, with any paid fare returned to your transit card. Offers expire after ${OFFER_MIN} minutes.`},
+{id:'inbox',kw:[/\bpassenger reports\b/,/\bresolve\b/,/\bdismiss\b/,/\breview reports\b/,/\bunder review\b/,/\burgent reports?\b/],guide:'inbox',
+ a:()=>`Operators read passenger reports in <b>Passenger Reports</b>: urgent ones come first. You can mark a report under review, resolve it or dismiss it with a reply, and the passenger sees your reply in their notifications.`},
+{id:'report',kw:[/\breport/,/\bcomplain/,/\bproblems?\b/,/\bissues?\b/,/\bconductor\b/,/\bdriver\b/,/\brude\b/,/\bunsafe\b/,/\bharass/,/\btheft\b/,/\blost (item|bag|phone|wallet)/,/\blost and found\b/,/\bleft my\b/,/\bemergency\b/,/\baccident\b/,/\bsuggestion\b/,/\breklamo\b/,/\bsumbong\b/,/\bovercharged\b/,/\bdirty\b/,/\bbroken\b/,/\bfeedback\b/],guide:'report',
+ a:()=>`Use <b>Report a problem</b> for an accident, the driver, conductor, another passenger, bus condition, a lost item, fares/payments or a suggestion. Pick a topic, choose the trip, pick the specific problem, describe it and submit. You get a reference number and updates in your notifications. In an emergency call 911 first.`},
+{id:'track',kw:[/\btrack/,/\bgps\b/,/\blive\b/,/\bmap\b/,/\bwhere is (my |the )?bus\b/,/\bbus location\b/,/\bplayback\b/,/\bmoving\b/,/\bcurrent location\b/,/\bnasaan na\b/],guide:'track',
+ a:()=>`<b>Track Bus</b> shows the route on a map. The bus moves in demo playback unless staff share live GPS from the Operator page (same browser only). Pick a trip, then drag the slider to move the bus.`},
+{id:'routes',kw:[/\broutes?\b/,/\broute map\b/,/\bstops?\b/,/\bstations?\b/,/\btowns?\b/,/\bcities\b/,/\bpass(es)? through\b/,/\bterminals?\b/,/\bhow many stops\b/,/\bdistance\b/,/\bhow far\b/,/\bkm\b/,/\bcoverage\b/,/\bdestinations?\b/],guide:'routes',
+ a:()=>`The sample corridor runs <b>${esc(STOPS[0].n)} → ${esc(STOPS[LAST].n)}</b> through ${STOPS.length} stops (about ${STOPS[LAST].km} km): ${STOPS.map(s=>esc(s.n)).join(' → ')}.<span class="lg-sm">Buses run one way in this prototype. <b>Routes & Stations</b> also lists the bus companies and a station directory.</span>`},
+{id:'ops',kw:[/\boperators?\b/,/\bstaff\b/,/\bdashboard\b/,/\badmin\b/,/\bpassenger list\b/,/\bwho booked\b/,/\bmark(ed)? completed\b/,/\bvalidate\b/,/\bscan/,/\bcheck (a )?ticket\b/,/\bdelay/,/\bactivity log\b/,/\bshare gps\b/],guide:'ops',
+ a:()=>`The <b>Operator</b> dashboard shows each trip's passengers, payments and status, a seat map per segment, and tools to confirm exits (<b>Completed</b>), report delays, check tickets (scan a QR or paste the code) and share GPS. Sign in with an <b>Operator staff</b> account (choose that type when you create your account).`},
+{id:'forgot',kw:[/\bforgot/,/\bpassword/,/\bnakalimutan\b/],
+ a:()=>`Password reset isn't available in this demo. Sign in with the account you created, or create a new demo account.`},
+{id:'signout',kw:[/\bsign ?out\b/,/\blog ?out\b/],guide:'signout',
+ a:()=>`Click your name at the top right (next to the bell), then press <b>Sign out</b>.`},
+{id:'signup',kw:[/\bsign ?up\b/,/\bcreate (an |my |a )?account\b/,/\bregister\b/,/\bnew account\b/,/\bmag ?register\b/,/\bgumawa\b.*\baccount\b/],guide:'signup',
+ a:()=>`Press <b>Create account</b> at the top right, choose your account type (Passenger or Operator staff), enter your name, email and a password (8+ characters), accept the Terms and Privacy Policy, and submit. Demo accounts are stored only in this browser.`},
+{id:'signin',kw:[/\bsign ?in\b/,/\blog ?in\b/,/\bmag ?login\b/,/\baccounts?\b/],guide:'signin',
+ a:()=>`Press <b>Sign in</b> at the top right and enter your email and password. New here? Choose <b>Create account</b>. You need an account to book, pay, use the transit card and send reports.`},
+{id:'role',kw:[/\bdemo user\b/,/\bswitch (user|role|account)\b/,/\brole\b/,/\baccount type\b/,/\bpassenger account\b/,/\boperator account\b/],guide:'signup',
+ a:()=>`There are two kinds of accounts: <b>Passenger</b> (book seats, pay, transit card, reports) and <b>Operator staff</b> (operator dashboard, accident reports, passenger reports). Choose the type when you press <b>Create account</b>; each type only sees its own pages. Click your name at the top right to sign out and switch.`},
+{id:'terms',kw:[/\bterms\b/,/\bprivacy\b/,/\bpolicy\b/,/\bpolicies\b/,/\blegal\b/,/\bconditions\b/],
+ a:()=>`The Terms and Conditions and Privacy Policy are not published yet. They must be written and legally reviewed (including Data Privacy Act requirements) before launch.`},
+{id:'contact',kw:[/\bcontact\b/,/\bsupport\b/,/\bcustomer service\b/,/\bhotline\b/,/\bphone number\b/,/\bhelp ?desk\b/,/\bemail address\b/],
+ a:()=>`The support contact is a placeholder (support@example.com), not a real inbox yet. For bus problems use <b>Report a problem</b>; in an emergency call 911.`},
+{id:'reset',kw:[/\breset\b/,/\bstart over\b/,/\bclear (data|demo)\b/],guide:'reset',
+ a:()=>`At the very bottom of the page, press <b>Reset demo</b> to clear all demo data (bookings, card balances, reports). It asks you to confirm first.`},
+{id:'about',w:.6,kw:[/\blagona\b/,/\babout\b/,/\bdemo\b/,/\bprototype\b/,/\bsample data\b/,/\bwebsite\b/,/\bsite\b/],a:()=>ABOUT}
+];
+const ABOUT_RE=/\b(what can you do|who are you|what are you|what is lagona|what is this (site|website|app|page)|how does (it|this|the (site|website|app)) work|help me|about (this )?(site|website|app|lagona))\b|^help$/;
+const SITE=/(\b(bus|buses|seats?|upuan|tickets?|book\w*|reserv\w*|fares?|pamasahe|magkano|routes?|stops?|stations?|terminals?|trips?|biyahe|cards?|laguna|lagona|pay\w*|operators?|passengers?|drivers?|conductors?|schedules?|depart\w*|report\w*|accounts?|sign\w*|log ?in|log ?out|track\w*|top ?up|load|balance|receipts?|qr|cancel\w*|refund\w*|discounts?|students?|seniors?|pwd|notif\w*|bell|gps|compan\w*|lli|dltb|jac|hm|aircon|terms|privacy|policy|contact|support|password|demo|website|site|app|page|button|click|menu|incident|accident|transfer\w*|dashboard|staff|oras|sakay|gcash|maya|nfc|wallet|cash|credit|debit|check ?in|manila|towns?|cities|map|live|role|switch|reset|manila)\b|bayad)/;
+const WHERE=/\b(where|saan|nasaan|take me|lead me|guide me|teach me|ituro|show me where|how to get to|go to|navigate)\b/;
+
+function answer(q){
+ const n=nrm(q);if(!n)return null;
+ if(/^(hi|hello|hey|hola|kumusta|musta|good (morning|afternoon|evening)|magandang (umaga|hapon|gabi))\b/.test(n)&&n.split(' ').length<=4)return{html:'Hi! 👋 '+ABOUT,chips:DEF};
+ if(/\b(thanks|thank you|salamat)\b/.test(n))return{html:'You’re welcome! Ask me anything else about the website.'};
+ if(/^(bye|goodbye|paalam)\b/.test(n))return{html:'Goodbye! I’m here whenever you need help finding something.'};
+ if(ABOUT_RE.test(n))return{html:ABOUT,chips:DEF};
+ const st=stopsIn(n);
+ if(!SITE.test(n)&&!st.length)return{html:OOS,chips:DEF};
+ let best=null,bs=0;
+ for(const it of I){let s=0;for(const re of it.kw)if(re.test(n))s++;s*=it.w||1;if(s>bs){bs=s;best=it}}
+ const auto=WHERE.test(n);
+ if(st.length>=2&&(!best||['fare','schedule','routes','discount','availability','search','operators'].includes(best.id)))
+  return{html:tripSummary(st),guide:st[1]>st[0]?'search':null,auto:false};
+ if(st.length===1&&(!best||best.id==='routes'||best.id==='stationdir')&&!leftover(n).length)return{html:stopInfo(st[0]),guide:'stations',auto};
+ if(!best)return{html:OOS,chips:DEF};
+ return{html:best.a(n,q,st),guide:best.guide,auto:auto&&!!best.guide}}
+
+/* ---------- chat panel ---------- */
+let greeted=false;
+function addMsg(html,cls){const d=document.createElement('div');d.className='lg-m '+cls;d.innerHTML=html;log.appendChild(d);log.scrollTop=log.scrollHeight;return d}
+function addChips(list){log.querySelectorAll('.lg-chips').forEach(x=>x.remove());if(!list||!list.length)return;const c=document.createElement('div');c.className='lg-chips';c.innerHTML=list.map(t=>`<button type="button" data-q="${esc(t)}">${esc(t)}</button>`).join('');log.appendChild(c);log.scrollTop=log.scrollHeight}
+function openPanel(){panel.hidden=false;fab.hidden=true;fab.setAttribute('aria-expanded','true');document.body.classList.add('lg-chat');if(!greeted){greeted=true;addMsg('Hi! 👋 '+ABOUT,'bot');addChips(DEF)}setTimeout(()=>inp.focus(),30)}
+function closePanel(){panel.hidden=true;fab.hidden=false;fab.setAttribute('aria-expanded','false');document.body.classList.remove('lg-chat')}
+function ask(q){q=String(q).trim();if(!q)return;if(panel.hidden)openPanel();addMsg(esc(q),'me');addChips(null);
+ const r=answer(q);if(!r)return;
+ if(r.auto){addMsg('<b>Okay, follow me!</b> I’ll highlight each spot to click in yellow. You can stop the guide anytime.','bot');startGuide(r.guide);return}
+ const m=addMsg(r.html,'bot');
+ if(r.guide)m.insertAdjacentHTML('beforeend',`<div style="margin-top:8px"><button type="button" class="lg-go" data-guide="${r.guide}">Show me where to click ▸</button></div>`);
+ addChips(r.chips);log.scrollTop=log.scrollHeight}
+
+/* ---------- click-by-click guides ---------- */
+const nav=v=>'#nav [data-v="'+v+'"]';
+const N=v=>({sel:nav(v),text:'Tap “'+VIEWS[v]+'” in the bottom menu.',skip:()=>S.view===v});
+const authOpen=()=>document.getElementById('authdlg').open;
+const menuOpen=()=>{const m=document.getElementById('acctmenu');return !!m&&!m.hidden};
+const outSel=()=>menuOpen()?'#acct [data-act="authout"]':'#acct .acctbtn';
+const PAX={sel:outSel,text:()=>menuOpen()?'Press “Sign out”. Then sign in or create a Passenger account.':'You’re signed in as operator staff. Passenger pages need a passenger account: click your name here.',until:()=>S.pax!=='OP',skip:()=>S.pax!=='OP'};
+const OP={sel:()=>authOpen()?'#asub':(signedIn()?outSel():'#acct [data-auth="signin"]'),text:()=>signedIn()?(menuOpen()?'Press “Sign out”. Then sign in with an operator account.':'Operator pages need an Operator staff account. Click your name here to sign out first.'):'Operator pages need an Operator staff account. Press Sign in (or Create account and choose “Operator staff”).',until:()=>S.pax==='OP',skip:()=>S.pax==='OP'};
+const AUTH={sel:()=>authOpen()?'#asub':'#acct [data-auth="signin"]',text:'You need to be signed in for this. Press Sign in (or Create account if you’re new, and choose “Passenger”). I’ll continue once you’re in.',until:signedIn,skip:signedIn};
+const SEARCH=[N('find'),
+ {sel:'#sf-f',text:'Choose where you’ll board (From).',on:'change'},
+ {sel:'#sf-t',text:'Choose your destination (To).',on:'change'},
+ {sel:'#sf-d',text:'Pick your travel date (today or later), then press Next.',manual:true},
+ {sel:'#sf button[type="submit"]',text:'Press “Search buses”.'},
+ {sel:'#results [data-act="open"]:not([disabled])',text:'Pick a trip and press “Select seat”.',miss:'No trip with free seats matched. Try another time or date, then press Search buses again.'}];
+const SEAT=[
+ {sel:'#dlg .seat.free',text:'Tap a green seat to hold it. Yellow seats are held or waiting for the previous rider’s exit. Seat 1 is the driver’s.',miss:'No green seat is free for your stops on this bus. Close this window and pick another trip.'},
+ {sel:'#dlg [data-chg="cat"]',text:'Choose your passenger type (Student, Senior and PWD get 20% off), then press Next.',manual:true},
+ {sel:'#dlg [data-act="book"]:not([disabled])',text:'Press the “Book seat” button.',miss:'Your seat hold may have expired. Tap a green seat again.'},
+ {sel:'#app [data-act="paybk"]',text:'Booked! Now press “Pay … & check in” to pay from your transit card and get your QR ticket.',miss:'I can’t see the Pay button yet. Open My Bookings from the bottom menu.'}];
+const mk=(steps,done)=>({steps,done});
+const G={
+ search:mk([PAX,...SEARCH],'You’re at the trip list. Press <b>Select seat</b> on a trip, then tap a green seat. Ask me “How do I book a seat?” and I’ll guide you through the rest.'),
+ book:mk([PAX,AUTH,...SEARCH,...SEAT],'Done! Your seat is booked and paid. Your QR ticket is in the receipt, and under <b>Ticket & receipt</b> in My Bookings.'),
+ pay:mk([PAX,AUTH,N('trips'),{sel:'[data-act="paybk"]',text:'Press “Pay … & check in” on the booking you want to pay.',miss:'You have no unpaid booking yet. Book a seat first.'}],'Paid! You are checked in. Your ticket is under <b>Ticket & receipt</b>.'),
+ receipt:mk([PAX,AUTH,N('trips'),{sel:'[data-act="rcpt"]',text:'Press “Ticket & receipt” on a paid booking to see your QR ticket.',miss:'Only paid bookings have a ticket. Pay for a booking first.'}],'That’s your QR ticket and receipt. Show the QR to staff when boarding.'),
+ cancel:mk([PAX,AUTH,N('trips'),{sel:'[data-act="cancel"]',text:'Press “Cancel booking” (only unpaid bookings can be cancelled).',miss:'You have no unpaid booking to cancel.'}],'Done. Cancelling releases the seat.'),
+ gettingoff:mk([PAX,AUTH,N('trips'),{sel:'[data-act="gettingoff"]',text:'Press “I’m getting off” to tell the operator.',miss:'This button appears on paid (checked-in) bookings.'}],'The operator has been told. Staff will mark your trip Completed.'),
+ bookings:mk([PAX,AUTH,N('trips')],'This is <b>My Bookings</b>: your trips, their status, tickets and notifications.'),
+ card:mk([PAX,AUTH,N('card')],'This is the <b>Transit Card</b> page: balance, top up, link a card, block a card and your transactions.'),
+ topup:mk([PAX,AUTH,N('card'),{sel:'[data-act="topup"]',text:'Press an amount to top up (simulated, no real money).'}],'Topped up! Your new balance is shown on the card.'),
+ linkcard:mk([PAX,AUTH,N('card'),{sel:'#lc',text:'Type your card number here, then press Next.',manual:true},{sel:'[data-act="link"]',text:'Press Link.'}],'Done. If the number is valid, your card is linked.'),
+ blockcard:mk([PAX,AUTH,N('card'),{sel:'[data-act="block"]',text:'Press “Report lost / block card”. It asks you to confirm.',miss:'This card is already blocked.'}],'Done. A blocked card can’t pay.'),
+ routes:mk([N('routes')],'This is <b>Routes & Stations</b>: the bus companies, the route with all stops, and the station directory.'),
+ stations:mk([N('routes'),{sel:'#q',text:'Type a stop name or city here to search the station directory, then press Next.',manual:true}],'The results below your search are the matching stations.'),
+ track:mk([N('track'),{sel:'[data-chg="trk"]',text:'Pick the trip you want to follow.',on:'change'},{sel:'#prog',text:'Drag this slider to move the bus along the route (demo playback), then press Next.',manual:true}],'That’s <b>Track Bus</b>. The bus moves in demo playback unless staff share live GPS.'),
+ report:mk([PAX,AUTH,N('report'),
+  {sel:'#rp-tiles [data-act="rptcat"]',text:'Choose what you want to report (accident, driver, conductor, passenger, bus, lost item, fare or other).'},
+  {sel:'#rp-bk',text:'Choose the trip this is about, then press Next.',manual:true},
+  {sel:'#rp-sub',text:'Choose the specific problem.',on:'change'},
+  {sel:'#rp-desc',text:'Describe what happened (at least 10 characters), then press Next.',manual:true},
+  {sel:'[data-act="rptsend"]',text:'Press “Submit report”.'}],'Once sent, you get a reference number and updates in your notifications.'),
+ bell:mk([{sel:'#bell',text:'Tap the 🔔 bell to see your notifications.'}],'That’s your notification list.'),
+ signup:mk([{sel:'#acct [data-auth="signup"]',text:'Press “Create account”.',skip:signedIn},{sel:'#asub',text:'Fill in your name, email and password, accept the terms, then press “Create account”.',skip:signedIn}],'You’re all set. If you were already signed in, use Sign out first to make a new account.'),
+ signin:mk([{sel:'#acct [data-auth="signin"]',text:'Press “Sign in”.',skip:signedIn},{sel:'#asub',text:'Enter your email and password, then press “Sign in”.',skip:signedIn}],'You’re signed in (or already were).'),
+ signout:mk([{sel:'#acct .acctbtn',text:'Click your name here.',skip:()=>!signedIn()||menuOpen(),miss:'You’re not signed in.'},{sel:'#acct [data-act="authout"]',text:'Press “Sign out”.',miss:'You’re not signed in.'}],'You’re signed out.'),
+ ops:mk([OP,N('ops'),{sel:'[data-chg="opTrip"]',text:'You’re in the Operator dashboard. Pick a date and trip to see passengers and the seat map, then press Next.',manual:true}],'Press <b>Completed</b> next to a passenger once they have got off, to free the seat.'),
+ incidents:mk([OP,N('incidents'),{sel:'#app [data-f="tripId"]',text:'Choose the bus, then fill in the type, location and what happened. Press Next when ready.',manual:true},{sel:'[data-act="incsend"]',text:'Press “Send report”. Passengers are notified.'}],'Report sent. Passengers on that bus have been notified.'),
+ inbox:mk([OP,N('inbox')],'These are the passenger reports. Urgent ones are listed first.'),
+ reset:mk([{sel:'[data-act="reset"]',text:'Press “Reset demo”. It asks you to confirm.'}],'Done.')};
+
+let A=null;
+function clearHL(){document.querySelectorAll('.lg-hl').forEach(x=>x.classList.remove('lg-hl'))}
+function startGuide(id){const g=G[id];if(!g)return;stopGuide();A={id,steps:g.steps,done:g.done,i:-1,n:0,el:null,key:null,total:g.steps.filter(s=>!(s.skip&&s.skip())).length};closePanel();next()}
+function stopGuide(){clearHL();A=null;tip.hidden=true}
+function dialogOpen(){return !!document.querySelector('dialog[open]')}
+function finish(){const d=A.done;stopGuide();addMsg(d,'bot');addChips(['What else can you help with?']);if(!dialogOpen())openPanel()}
+function next(){if(!A)return;clearHL();A.el=null;A.key=null;A.i++;while(A.i<A.steps.length&&A.steps[A.i].skip&&A.steps[A.i].skip())A.i++;if(A.i>=A.steps.length)return finish();A.n++;tick()}
+function place(el){const tw=tip.offsetWidth,th=tip.offsetHeight,vw=innerWidth,vh=innerHeight;let top,left;
+ if(!el){top=Math.max(76,(vh-th)/3);left=(vw-tw)/2}
+ else{const r=el.getBoundingClientRect();left=Math.min(Math.max(8,r.left+r.width/2-tw/2),vw-tw-8);top=r.bottom+12;if(top+th>vh-8)top=r.top-th-12;if(top<8)top=Math.max(8,vh-th-8)}
+ tip.style.left=left+'px';tip.style.top=top+'px'}
+function bring(el){if(el.closest('.dock,.top')){el.scrollIntoView({block:'nearest',inline:'center'});return}const r=el.getBoundingClientRect();if(r.top<80||r.bottom>innerHeight-90)el.scrollIntoView({block:'center',inline:'nearest',behavior:'smooth'})}
+function tick(){if(!A)return;const s=A.steps[A.i];if(!s)return;
+ if(s.until&&s.until()){next();return}
+ let el=null;try{el=document.querySelector(typeof s.sel==='function'?s.sel():s.sel)}catch(e){}
+ if(el&&!el.getClientRects().length)el=null;
+ if(el!==A.el){clearHL();A.el=el;if(el){el.classList.add('lg-hl');bring(el)}}
+ const raw=typeof s.text==='function'?s.text():s.text,txt=el?raw:(s.miss||'I can’t see that on this screen yet. Press Next to continue, or Stop guide to end.'),key=A.i+'|'+(el?1:0)+'|'+txt;
+ if(A.key!==key){A.key=key;
+  tip.innerHTML=`<div class="lg-th">Step ${A.n}${A.total>=A.n?' of '+A.total:''}</div><div>${esc(txt)}</div><div class="lg-tb"><button type="button" data-lg="next">${s.manual||!el?'Next ▸':'Skip step'}</button><button type="button" data-lg="stop">Stop guide</button></div>`}
+ const od=[...document.querySelectorAll('dialog[open]')],host=od[od.length-1]||document.body;
+ if(tip.parentNode!==host)host.appendChild(tip);
+ tip.hidden=false;place(el)}
+setInterval(tick,250);addEventListener('resize',tick);addEventListener('scroll',tick,true);
+
+/* advance when the user does what the step asks */
+document.addEventListener('click',e=>{if(!A)return;const s=A.steps[A.i];if(!s||s.manual||s.until||s.on==='change')return;
+ if(A.el&&A.el.contains(e.target)){const i=A.i;setTimeout(()=>{if(A&&A.i===i)next()},450)}},true);
+document.addEventListener('change',e=>{if(!A)return;const s=A.steps[A.i];if(!s||s.on!=='change')return;
+ if(A.el&&A.el===e.target){const i=A.i;setTimeout(()=>{if(A&&A.i===i)next()},350)}},true);
+
+/* ---------- wiring ---------- */
+document.addEventListener('click',e=>{const t=e.target.closest&&e.target.closest('[data-cb],[data-q],[data-guide],[data-lg]');if(!t)return;
+ const d=t.dataset;
+ if(d.cb==='open')openPanel();else if(d.cb==='close')closePanel();
+ else if(d.q)ask(d.q);else if(d.guide)startGuide(d.guide);
+ else if(d.lg==='next')next();
+ else if(d.lg==='stop'){stopGuide();if(dialogOpen())toast('Guide stopped.');else{openPanel();addMsg('Guide stopped. Ask me anything else about the website.','bot')}}});
+document.addEventListener('submit',e=>{if(e.target.id!=='lgForm')return;e.preventDefault();const v=inp.value;inp.value='';ask(v)});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!panel.hidden)closePanel()});
+window.LaGOnaAssistant={ask,startGuide,answer};
+})();
+</script>
+
 </body>
 </html>
