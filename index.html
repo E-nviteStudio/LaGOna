@@ -55,6 +55,9 @@ nav{display:flex;gap:2px;flex:1;flex-wrap:wrap}nav button{background:none;border
 .meter{height:6px;background:var(--line);border-radius:4px;overflow:hidden;width:120px;margin-top:6px}.meter i{display:block;height:100%;background:var(--teal)}
 .empty{text-align:center;padding:30px;color:var(--mut);border:2px dashed var(--line);border-radius:var(--r)}
 .note{background:var(--orgbg);color:var(--org);border-radius:10px;padding:8px 12px;font-size:13px;font-weight:600}
+.sgw>label{margin-bottom:4px}.sg{position:relative}.sgl{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:20;margin:0;padding:4px;list-style:none;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--sh);max-height:264px;overflow:auto;min-width:230px}
+.sgl li{padding:9px 10px;border-radius:8px;cursor:pointer;display:flex;justify-content:space-between;gap:10px;font-size:14px;color:var(--ink)}.sgl li small{color:var(--mut);font-size:12px;text-align:right}
+.sgl li[aria-selected=true],.sgl li:hover{background:var(--bluebg)}.sgl li.none{color:var(--mut);cursor:default;display:block}.sgl li.none:hover{background:none}
 dialog{border:0;border-radius:18px;padding:0;width:min(940px,96vw);max-height:92vh;background:var(--card);color:var(--ink);box-shadow:0 20px 60px rgba(0,0,0,.4)}dialog::backdrop{background:rgba(7,15,38,.6)}
 .dh{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--line)}.db{padding:20px;overflow:auto;max-height:78vh}.split{display:grid;grid-template-columns:minmax(260px,330px) 1fr;gap:22px}
 .bus{background:var(--bg);border:2px solid var(--line);border-radius:26px 26px 14px 14px;padding:14px;max-width:300px;margin:auto}.front{display:flex;justify-content:space-between;font-size:12px;font-weight:600;color:var(--mut);padding:2px 6px 10px;border-bottom:2px dashed var(--line);margin-bottom:10px}
@@ -309,7 +312,47 @@ const BRAND='LaGOna', HOLD_SEC=120, SEATS=50, MPK=1.5; // 50-seater: 1 front + 1
  * Store stops per route (ordered), and distinguish terminal / station / stop / city. Also add reverse-direction routes.
  * Travel time here is km * MPK (1.5 min/km): label it 'estimated' in the UI or use scheduled times from the operator.
  */
-const STOPS=[{n:'Pagsanjan',km:0,m:'Pagsanjan, Laguna',lat:14.2733,lng:121.4547},{n:'Sta. Cruz',km:4,m:'Santa Cruz, Laguna',lat:14.2785,lng:121.4161},{n:'Pila',km:11,m:'Pila, Laguna',lat:14.2339,lng:121.3626},{n:'Victoria',km:19,m:'Victoria, Laguna',lat:14.2253,lng:121.3278},{n:'Bay',km:33,m:'Bay, Laguna',lat:14.1833,lng:121.2833},{n:'Los Baños',km:39,m:'Los Baños, Laguna',lat:14.1699,lng:121.2437},{n:'Calamba',km:51,m:'Calamba City, Laguna',lat:14.2117,lng:121.1653},{n:'Cabuyao',km:63,m:'Cabuyao City, Laguna',lat:14.2724,lng:121.1251},{n:'Santa Rosa',km:73,m:'Santa Rosa City, Laguna',lat:14.3122,lng:121.1114},{n:'Biñan',km:83,m:'Biñan City, Laguna',lat:14.3333,lng:121.0802},{n:'San Pedro',km:91,m:'San Pedro City, Laguna',lat:14.3595,lng:121.0473},{n:'Muntinlupa',km:99,m:'Muntinlupa City (Alabang)',lat:14.4181,lng:121.03},{n:'Taguig',km:111,m:'Taguig City',lat:14.5176,lng:121.0509},{n:'Makati',km:119,m:'Makati City',lat:14.5547,lng:121.0244},{n:'Pasay (Buendia)',km:125,m:'Pasay City, Buendia',lat:14.5543,lng:121.0123},{n:'Quezon City (Cubao)',km:137,m:'Quezon City, Cubao',lat:14.6197,lng:121.0537}];
+const STOPS=[{n:'Pagsanjan',km:0,m:'Pagsanjan, Laguna',lat:14.2733,lng:121.4547},
+{n:'Pagsawitan',km:1.5,m:'Pagsawitan, Laguna',lat:14.2752,lng:121.4402},
+{n:'Patimbao',km:2.5,m:'Patimbao, Laguna',lat:14.2766,lng:121.4306},
+{n:'Bagumbayan',km:3.2,m:'Bagumbayan, Laguna',lat:14.2775,lng:121.4238},
+{n:'Sta. Cruz',km:4,m:'Santa Cruz, Laguna',a:['Santa Cruz'],lat:14.2785,lng:121.4161},
+{n:'Bubukal',km:5,m:'Bubukal, Laguna',lat:14.2721,lng:121.4085},
+{n:'SunStar Mall',km:6,m:'SunStar Mall, Laguna',lat:14.2658,lng:121.4008},
+{n:'Metro Central',km:7,m:'Metro Central, Laguna',lat:14.2594,lng:121.3932},
+{n:'Duhat',km:8,m:'Duhat, Laguna',lat:14.253,lng:121.3855},
+{n:'Labuin',km:9.5,m:'Labuin, Laguna',lat:14.2435,lng:121.3741},
+{n:'Pila',km:11,m:'Pila, Laguna',lat:14.2339,lng:121.3626},
+{n:'San Antonio (Pila)',km:12.5,m:'San Antonio (Pila), Laguna',a:['San Antonio Pila'],lat:14.2323,lng:121.3561},
+{n:'Balite',km:14.5,m:'Balite, Laguna',lat:14.2301,lng:121.3474},
+{n:'Masapang',km:17,m:'Masapang, Laguna',lat:14.2275,lng:121.3365},
+{n:'Victoria',km:19,m:'Victoria, Laguna',lat:14.2253,lng:121.3278},
+{n:'Dayap',km:23,m:'Dayap, Laguna',lat:14.2133,lng:121.3151},
+{n:'Bay Jollibee/McDo',km:32,m:'Bay Jollibee/McDo, Laguna',a:['Bay Jollibee','Bay McDo','Bay Mcdonalds'],lat:14.1863,lng:121.2865},
+{n:'Bay',km:33,m:'Bay, Laguna',lat:14.1833,lng:121.2833},
+{n:'Global Bay',km:34.5,m:'Global Bay, Laguna',lat:14.1804,lng:121.2748},
+{n:'Sto. Domingo',km:36,m:'Sto. Domingo, Laguna',a:['Sto Domingo','Santo Domingo'],lat:14.1776,lng:121.2663},
+{n:'San Antonio (Los Baños)',km:37,m:'San Antonio (Los Baños), Laguna',a:['San Antonio Los Banos'],lat:14.1756,lng:121.2607},
+{n:'Olivares (Los Baños)',km:38,m:'Olivares (Los Baños), Laguna',a:['Olivares Los Banos'],lat:14.1737,lng:121.255},
+{n:'Anos',km:38.8,m:'Anos, Laguna',lat:14.1722,lng:121.2505},
+{n:'UP College',km:39.4,m:'UP College, Laguna',a:['UPLB','UP Los Banos'],lat:14.171,lng:121.2471},
+{n:'Los Baños Municipal Hall',km:40,m:'Los Baños Municipal Hall, Laguna',a:['Los Banos','LB Municipal Hall','Los Banos Town Hall'],lat:14.1699,lng:121.2437},
+{n:'Pansol',km:43,m:'Pansol, Laguna',lat:14.1813,lng:121.2223},
+{n:'Halang',km:45,m:'Halang, Laguna',lat:14.1889,lng:121.2081},
+{n:'Lalakay',km:46.5,m:'Lalakay, Laguna',lat:14.1946,lng:121.1974},
+{n:'Buccal',km:47.5,m:'Buccal, Laguna',a:['Bucal'],lat:14.1984,lng:121.1902},
+{n:'Turbina',km:49,m:'Turbina, Laguna',lat:14.2041,lng:121.1796},
+{n:'SM Calamba',km:51,m:'SM City Calamba, Laguna',a:['Calamba'],lat:14.2117,lng:121.1653},
+{n:'STI College',km:52.5,m:'STI College, Laguna',lat:14.2193,lng:121.1603},
+{n:'Cabuyao',km:63,m:'Cabuyao City, Laguna',lat:14.2724,lng:121.1251},
+{n:'Santa Rosa',km:73,m:'Santa Rosa City, Laguna',a:['Sta Rosa','Sta. Rosa'],lat:14.3122,lng:121.1114},
+{n:'Biñan',km:83,m:'Biñan City, Laguna',a:['Binan'],lat:14.3333,lng:121.0802},
+{n:'San Pedro',km:91,m:'San Pedro City, Laguna',lat:14.3595,lng:121.0473},
+{n:'Muntinlupa',km:99,m:'Muntinlupa City (Alabang)',a:['Alabang'],lat:14.4181,lng:121.03},
+{n:'Taguig',km:111,m:'Taguig City',lat:14.5176,lng:121.0509},
+{n:'Makati',km:119,m:'Makati City',lat:14.5547,lng:121.0244},
+{n:'Pasay (Buendia)',km:125,m:'Pasay City, Buendia',a:['Pasay','Buendia'],lat:14.5543,lng:121.0123},
+{n:'Quezon City (Cubao)',km:137,m:'Quezon City, Cubao',a:['Quezon City','Cubao','QC'],lat:14.6197,lng:121.0537}];
 const IX=n=>STOPS.findIndex(s=>s.n===n); // sample distances, not official
 const OPS=[{id:'LLI',mult:1,type:'Aircon  ',times:['05:30','08:15','13:00','17:45'],ann:'Sample announcement: no active advisories.'},
 {id:'HM Transport',mult:1.05,type:'Aircon  ',times:['06:00','09:30','14:15','18:30'],ann:'Sample announcement: schedule is for demo only.'},
@@ -336,6 +379,22 @@ const norm=v=>String(v||'').replace(/[^0-9a-f]/gi,'').toLowerCase(); // card ids
 const hash=s=>[...s].reduce((a,c)=>(a*31+c.charCodeAt(0))>>>0,7);
 const fmtT=m=>{m=((m%1440)+1440)%1440;return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0')};
 const stopTime=(tr,i)=>fmtT(+tr.time.slice(0,2)*60+ +tr.time.slice(3)+Math.round(STOPS[i].km*MPK));
+/* Countdown until the bus reaches boarding stop i (same estimate as departed(): trip start + km * MPK). */
+const etaTarget=(tr,i)=>new Date(tr.date+'T'+tr.time+':00').getTime()+Math.round(STOPS[i].km*MPK)*60000;
+/* Every ETA goes through etaLabel/etaFmt. Shown ONLY when the bus is within 3 hrs: hours and minutes (e.g. 2 hrs 30 min), never above 3 hrs. Further away: only the clock time (no countdown). */
+const ETA_MAX=180*60000;
+function etaFmt(ms){const m=Math.max(1,Math.ceil(ms/60000));
+ if(m<60)return m+' min';                       /* under 1 hr: minutes only */
+ const h=Math.floor(m/60),r=m%60;               /* 1 to 3 hrs: hours + minutes, e.g. 2 hrs 30 min */
+ return h+(h>1?' hrs':' hr')+(r?' '+r+' min':'')}
+function etaClock(t){const d=new Date(t),c=fmtT(d.getHours()*60+d.getMinutes()),k=ymd(d),td=today(),tm=ymd(new Date(Date.now()+864e5));
+ return k===td?'at '+c:k===tm?'tomorrow at '+c:'on '+d.toLocaleDateString('en-PH',{month:'short',day:'numeric'})+' at '+c}
+function etaLabel(target,n,short){const ms=target-Date.now();
+ if(ms<=-60000)return short?'already passed':'Bus has passed '+n;
+ if(ms<=0)return short?'arriving now':'Bus is arriving at '+n+' now';
+ if(ms>ETA_MAX){const d=new Date(target);return short?'':'Bus reaches '+n+' at '+fmtT(d.getHours()*60+d.getMinutes())} /* more than 3 hrs away: clock time only, no countdown */
+ return short?'in about '+etaFmt(ms):'Bus reaches '+n+' in about '+etaFmt(ms)}
+function etaSpan(tr,i,short,pre){const t=etaTarget(tr,i),n=STOPS[i].n,l=etaLabel(t,n,short);return`<span class="eta" data-t="${t}" data-n="${esc(n)}" data-pre="${esc(pre||'')}" ${short?'data-short="1"':''} data-live="${t>Date.now()?1:0}">${l?esc((pre||'')+l):''}</span>`}
 let tt;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),3200)}
 /* IMPROVE:
  * localStorage is not a database: data is per-browser, editable by the user, and lost when cleared. Use a transactional backend.
@@ -348,6 +407,9 @@ const fresh=()=>({pax:'A',view:'find',bookings:[],txs:[],cards:{'450012340001':{
 let S;try{S=Object.assign(fresh(),JSON.parse(localStorage.getItem(KEY))||{})}catch(e){S=fresh()}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
 S.reports=S.reports||[];S.link=S.link||{};for(const k in S.link)if(PAX[k]&&S.cards[S.link[k]])PAX[k].card=S.link[k];
+/* Stop list v2 (more stops): remap saved stop indexes from the old 16-stop list so existing bookings keep their stops. */
+if(S.sv!==2){const OLD=['Pagsanjan','Sta. Cruz','Pila','Victoria','Bay','Los Baños','Calamba','Cabuyao','Santa Rosa','Biñan','San Pedro','Muntinlupa','Taguig','Makati','Pasay (Buendia)','Quezon City (Cubao)'],REN={'Los Baños':'Los Baños Municipal Hall','Calamba':'SM Calamba'},mv=i=>{const n=OLD[i];if(n==null)return i;const k=IX(REN[n]||n);return k<0?i:k};
+ (S.bookings||[]).forEach(b=>{b.from=mv(b.from);b.to=mv(b.to)});(S.watch||[]).forEach(w=>{w.from=mv(w.from)});(S.incidents||[]).forEach(x=>{x.stop=mv(x.stop)});S.sv=2}
 if(S.pax!=='OP'&&!PAX[S.pax])S.pax='A'; // real accounts re-apply their own identity once the session is restored
 S.txs.forEach(x=>{if(x.status==='Pending')x.status='Failed'}); // page closed mid-payment: nothing was charged
 /* Booking statuses are only: Booked (passenger reserved) > Checked in (passenger paid) > Completed (operator confirmed passenger got off). Older saved statuses are mapped onto these. */
@@ -360,10 +422,13 @@ const logIt=(action,rec)=>S.log.unshift({ts:stamp(),who:who(),action,rec});
 const nid=()=>S.n++;
 /* ===== Seat plans, per bus. SAMPLE layouts only: real plans must come from each operator's vehicle records. Seat 1 is always the driver. ===== */
 const LAYOUTS={L50:{name:'50-seater (2+2)',rows:11,back:5,seats:50},L45:{name:'45-seater (2+2)',rows:10,back:4,seats:45}};
-const layoutOf=tr=>hash(tr.bus)%3===0?LAYOUTS.L45:LAYOUTS.L50;
+const layoutOf=tr=>LAYOUTS.L50; // every bus is a 50-seater: driver + 11 rows of 4 + 5 seats in the back row
 const seatsOf=tr=>layoutOf(tr).seats;
 const isOut=tr=>!!(S.flags&&S.flags[tr.id]); // accident or mechanical problem reported: no new bookings
 const OFFER_MIN=15; // how long a passenger has to answer a transfer offer
+/* Departure time windows for the Find a Bus search (matched against the time the bus leaves the boarding stop). */
+const SLOTS=[['all','Any time',0,1440],['am','7am - 11am',420,660],['mid','11am - 1pm',660,780],['pm','1pm - 5pm',780,1020],['eve','6pm - 11pm',1080,1380]];
+const inSlot=(tr,i,k)=>{const sl=SLOTS.find(x=>x[0]===k);if(!sl||k==='all')return true;const t=stopTime(tr,i),m=+t.slice(0,2)*60+ +t.slice(3);return m>=sl[2]&&m<sl[3]};
 /* ========= TRIPS, FARES, SEGMENT AVAILABILITY ========= */
 /* IMPROVE:
  * Trips are generated from fixed time lists and hash-based bus numbers for any date. Real trips must be entered by an authorized admin/operator
@@ -411,7 +476,7 @@ function seatState(tr,s,f,t){
  if(st==='free'&&h)return'mine';return st}
 const avail=(tr,f,t)=>{let n=0;for(let s=2;s<=seatsOf(tr);s++){const x=seatState(tr,s,f,t);if(x==='free'||x==='mine')n++}return n};
 /* ========= UI STATE ========= */
-const UI={f:IX('Sta. Cruz'),t:IX('Quezon City (Cubao)'),date:today(),time:'any',op:'all',cat:'Regular',trip:null,seat:null,card:null,busy:false,mode:'',opTrip:null,q:'',prog:0,trk:null};
+const UI={f:null,t:null,date:today(),op:'all',cat:'Regular',trip:null,seat:null,card:null,busy:false,mode:'',opTrip:null,q:'',prog:0,trk:null,slot:'all'};
 if(tripsFor(today()).every(x=>departed(x,0)))UI.date=ymd(new Date(Date.now()+864e5)); // all of today's buses have left: default to tomorrow
 const app=$('#app'),dlg=$('#dlg');
 const opts=(arr,sel,off=0)=>arr.map((x,i)=>`<option value="${i+off}" ${i+off===sel?'selected':''}>${esc(x.n||x)}</option>`).join('');
@@ -420,7 +485,7 @@ const VIEWS={earn:'Earnings',audit:'Audit Trail',find:'Find a Bus',routes:'Route
 const navBadge=v=>{const n=v==='incidents'?Object.keys(S.flags).length:v==='inbox'?S.reports.filter(r=>r.status==='Submitted'||r.status==='Under review').length:0;return n?` <i style="font-style:normal;background:var(--red);color:#fff;border-radius:9px;padding:0 7px;font-size:11px">${n}</i>`:''};
 const NAVICON={earn:'<path d="M12 3v18"/><path d="M16.5 7.5c-1-1.5-2.7-2-4.5-2-2.5 0-4 1.2-4 3s1.5 2.6 4 3 4 1.2 4 3-1.5 3-4 3c-2 0-3.700-.6-4.800-2"/>',audit:'<path d="M6 3h9l4 4v14H6z"/><path d="M9 12h7M9 16h7M9 8h3"/>',"find": "<circle cx=\"11\" cy=\"11\" r=\"7\"/><path d=\"M20 20l-4-4\"/>", "routes": "<path d=\"M12 21s-6-5.5-6-11a6 6 0 0112 0c0 5.5-6 11-6 11z\"/><circle cx=\"12\" cy=\"10\" r=\"2.2\"/>", "track": "<circle cx=\"12\" cy=\"12\" r=\"3\"/><path d=\"M12 2v3M12 19v3M2 12h3M19 12h3\"/><circle cx=\"12\" cy=\"12\" r=\"8\"/>", "trips": "<path d=\"M4 8a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 000 4v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2a2 2 0 000-4z\"/><path d=\"M14 6v12\" stroke-dasharray=\"2 2\"/>", "report": "<path d=\"M12 3l10 18H2z\"/><path d=\"M12 10v5M12 18v.01\"/>", "card": "<rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"2\"/><path d=\"M3 10h18M7 15h4\"/>", "incidents": "<path d=\"M12 3l10 18H2z\"/><path d=\"M12 10v5M12 18v.01\"/>", "inbox": "<path d=\"M3 13l3-8h12l3 8v6H3z\"/><path d=\"M3 13h5l1 3h6l1-3h5\"/>", "ops": "<rect x=\"3\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"3\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/><rect x=\"14\" y=\"14\" width=\"7\" height=\"7\" rx=\"1\"/>"};
 const navIco=v=>NAVICON[v]?`<svg class="ni" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${NAVICON[v]}</svg>`:'';
-function renderNav(){const ok=S.pax==='OP'?['ops','earn','audit','incidents','inbox','routes','track']:['find','routes','track','trips','report','card'];if(!ok.includes(S.view))S.view=ok[0];
+function renderNav(){const ok=S.pax==='OP'?['ops','earn','audit','incidents','inbox','routes','track']:['find','trips','routes','track','card','report'];if(!ok.includes(S.view))S.view=ok[0];
  $('#nav').innerHTML=ok.map(v=>`<button data-act="nav" data-v="${v}" ${S.view===v?'aria-current="page"':''}>${navIco(v)}<span>${VIEWS[v]}</span>${navBadge(v)}</button>`).join('');
  const c=S.notes.filter(n=>n.pax===S.pax&&!n.read).length;$('#bc').textContent=c||'';$('#bell').style.display=''}
 function render(){expireOffers();dropMap();renderNav();({report:rReport,inbox:rInbox,incidents:rInci,find:rFind,routes:rRoutes,track:rTrack,trips:rTrips,card:rCard,ops:rOps,earn:rEarn,audit:rAudit})[S.view]();document.querySelectorAll('[data-brand]').forEach(e=>e.textContent=BRAND);save()}
@@ -429,16 +494,18 @@ function render(){expireOffers();dropMap();renderNav();({report:rReport,inbox:rI
  * UX: support more than 1 passenger, show estimated times as 'est.', add reverse-direction search, a swap button, and clear empty/error states.
  * Remove 'Demo data only' wording only after real data and payments are live.
  */
+const sgField=(w,lab,val,ph)=>`<div class="sgw"><label for="sf-${w}">${lab}</label><div class="sg"><input id="sf-${w}" type="text" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="sf-${w}-l" autocomplete="off" autocapitalize="words" spellcheck="false" enterkeyhint="search" placeholder="${ph}" value="${esc(val)}"><ul id="sf-${w}-l" class="sgl" role="listbox" aria-label="${lab} suggestions" hidden></ul></div></div>`;
+function sfMsg(){return`1 passenger per booking in this prototype. Route: ${STOPS[0].n} to ${STOPS[STOPS.length-1].n}, ${STOPS.length} stops (sample corridor, distances approximate).`}
 function rFind(){app.innerHTML=`<section class="hero"><div class="wrap"><h1>Reserve your seat by stop, not just by bus.</h1>
 <p>Search Laguna bus trips, pick a seat for your exact segment, pay with a transit card and ride with a digital ticket.</p>
 <div class="line" aria-hidden="true"><i class="stop"><span>Sta. Cruz</span></i><div class="seg sA"></div><i class="stop"><span>Calamba</span></i><div class="seg sB"></div><i class="stop"><span>Muntinlupa</span></i><div class="seg sB"></div><i class="stop"><span>Cubao</span></i></div></div></section>
 <div class="wrap"><form class="panel" id="sf" aria-label="Journey search"><div class="fgrid">
-<label>From<select id="sf-f">${opts(STOPS.slice(0,STOPS.length-1),UI.f)}</select></label>
-<label>To<select id="sf-t">${opts(STOPS.slice(UI.f+1),UI.t,UI.f+1)}</select></label>
+${sgField('f','From',UI.f==null?'':STOPS[UI.f].n,'Type your boarding stop, e.g. Sta. Cruz')}
+${sgField('t','To',UI.t==null?'':STOPS[UI.t].n,'Type your destination, e.g. Cubao')}
 <label>Date<input type="date" id="sf-d" value="${UI.date}" min="${today()}" required></label>
-<label>Departure<select id="sf-h">${['any:Any time','am:Morning (before 12:00)','pm:Afternoon (12:00 to 17:00)','ev:Evening (after 17:00)'].map(x=>{const[v,l]=x.split(':');return`<option value="${v}" ${UI.time===v?'selected':''}>${l}</option>`}).join('')}</select></label>
 <label>Bus company<select id="sf-o"><option value="all">All companies</option>${OPS.map(o=>`<option ${UI.op===o.id?'selected':''}>${o.id}</option>`).join('')}</select></label>
-<button class="btn t" type="submit">Search buses</button></div><p class="mut" id="sf-msg" style="margin:10px 0 0;font-size:13px">1 passenger per booking in this prototype. Route: Pagsanjan to Quezon City (Cubao), 16 stops (sample corridor).</p></form>
+<label>Departure time<select id="sf-s">${SLOTS.map(x=>`<option value="${x[0]}" ${UI.slot===x[0]?'selected':''}>${x[1]}</option>`).join('')}</select></label>
+<button class="btn t" type="submit">Search buses</button></div><p class="mut" id="sf-msg" aria-live="polite" style="margin:10px 0 0;font-size:13px">${sfMsg()}</p></form>
 <section class="sec" aria-live="polite"><h2>Available trips</h2><div id="results" class="list"></div></section>
 <section class="sec"><h2>How the transit card works</h2><div class="grid">
 <div class="card"><h3>1. Link or register</h3><p class="mut">Add your card to your account. Demo cards: 4500 1234 0001 and 0002.</p></div>
@@ -450,12 +517,15 @@ function rFind(){app.innerHTML=`<section class="hero"><div class="wrap"><h1>Rese
 <div class="card"><h3>Paperless</h3><p class="mut">Receipts and QR tickets live in My Bookings.</p></div></div></section></div>`;
  res()}
 function res(){const box=$('#results');if(!box)return;sweep();
- let tr=tripsFor(UI.date).filter(x=>UI.op==='all'||x.op.id===UI.op).filter(x=>{const h=+stopTime(x,UI.f).slice(0,2);return UI.time==='any'||(UI.time==='am'&&h<12)||(UI.time==='pm'&&h>=12&&h<17)||(UI.time==='ev'&&h>=17)}).sort((a,b)=>stopTime(a,UI.f)<stopTime(b,UI.f)?-1:1);
- if(!tr.length){box.innerHTML=`<div class="empty"><b>No matching trips.</b><br>Try another time of day or choose All companies.</div>`;return}
- box.innerHTML=tr.map(x=>{const gone=departed(x,UI.f),a=gone?0:avail(x,UI.f,UI.t),fr=fare(x.op,UI.f,UI.t,'Regular');const bs=gone?['Departed','r']:isOut(x)?['Not available','r']:a===0?['Full','r']:a<=6?['Almost full','o']:['Open','g'];
+ if(UI.f==null||UI.t==null||UI.t<=UI.f){box.innerHTML=`<div class="empty"><b>Where are you going?</b><br>Type your boarding stop (From) and your destination (To), then press Search buses.</div>`;return}
+ const all=tripsFor(UI.date).filter(x=>UI.op==='all'||x.op.id===UI.op).filter(x=>inSlot(x,UI.f,UI.slot)).sort((a,b)=>stopTime(a,UI.f)<stopTime(b,UI.f)?-1:1),
+  tr=all.filter(x=>!departed(x,UI.f)),left=all.length-tr.length,stn=esc(STOPS[UI.f].n);
+ if(!tr.length){box.innerHTML=left?`<div class="empty"><b>All buses on this date have already left ${stn}.</b><br>Choose tomorrow or a later date.</div>`:`<div class="empty"><b>No matching trips.</b><br>Try another date, another departure time, or choose All companies.</div>`;return}
+ box.innerHTML=(left?`<p class="mut" style="margin:0;font-size:13px">${left} earlier bus${left>1?'es have':' has'} already left ${stn} and ${left>1?'are':'is'} hidden.</p>`:'')+tr.map(x=>{const a=avail(x,UI.f,UI.t),fr=fare(x.op,UI.f,UI.t,'Regular');const bs=isOut(x)?['Not available','r']:a===0?['Full','r']:a<=6?['Almost full','o']:['Open','g'];
  return`<article class="card res"><div><div class="meta"><b style="color:var(--ink)">${esc(x.op.id)}</b><span>Bus ${x.bus}</span><span class="badge ${bs[1]}">${bs[0]}</span></div>
  <div class="big">${stopTime(x,UI.f)} ${STOPS[UI.f].n} → ${stopTime(x,UI.t)} ${STOPS[UI.t].n}</div>
- <div class="meta"><span>${x.date}</span><span>${x.op.type}</span><span>Sample fare from ${peso(fr.total)}</span><span>${gone?'Already left your boarding stop':a+' of '+(seatsOf(x)-1)+' seats free for this segment'}</span></div><div class="meter" aria-hidden="true"><i style="width:${a/(seatsOf(x)-1)*100}%"></i></div></div>
+ <div class="meta" style="margin:2px 0 4px"><b style="color:var(--teal)">${etaSpan(x,UI.f,0,'⏱ ')}</b></div>
+ <div class="meta"><span>${x.date}</span><span>${x.op.type}</span><span>Sample fare from ${peso(fr.total)}</span><span>${a+' of '+(seatsOf(x)-1)+' seats free for this segment'}</span></div><div class="meter" aria-hidden="true"><i style="width:${a/(seatsOf(x)-1)*100}%"></i></div></div>
  <button class="btn" data-act="open" data-id="${esc(x.id)}" ${a?'':'disabled'}>Select seat</button></article>`}).join('')}
 /* ========= SEAT DIALOG & CHECKOUT ========= */
 function openDlg(h){const sc=dlg.open?($('.db',dlg)||{}).scrollTop:0;dlg.innerHTML=h;if(!dlg.open)dlg.showModal();const d=$('.db',dlg);if(d&&sc)d.scrollTop=sc}
@@ -468,7 +538,7 @@ function seatMap(tr){const{f,t}=UI;const btn=(n,pos)=>{if(n===DRIVER)return driv
 function rSeat(){const tr=tripById(UI.trip),fr=fare(tr.op,UI.f,UI.t,UI.cat),c=S.cards[UI.card],h=S.holds[hk(tr,UI.seat)];UI.mode='seat';
  openDlg(`<div class="dh"><h3 style="margin:0">${esc(tr.op.id)} · Bus ${tr.bus} · ${STOPS[UI.f].n} → ${STOPS[UI.t].n}</h3><button class="btn g sm" data-act="close">Close</button></div>
  <div class="db"><div class="split"><div>${seatMap(tr)}<p class="mut" style="font-size:12.5px;text-align:center;margin-top:10px">Tap a yellow seat to be notified when its previous passenger exits.</p></div>
- <div><h3>Your booking</h3><dl><dt>Passenger</dt><dd>${esc(who())}</dd><dt>Segment</dt><dd>${STOPS[UI.f].n} → ${STOPS[UI.t].n} (${fr.km} km)</dd><dt>Seat</dt><dd>${UI.seat||'Not selected'}</dd></dl>
+ <div><h3>Your booking</h3><dl><dt>Passenger</dt><dd>${esc(who())}</dd><dt>Segment</dt><dd>${STOPS[UI.f].n} → ${STOPS[UI.t].n} (${fr.km} km)</dd><dt>Bus reaches your stop</dt><dd>${stopTime(tr,UI.f)}${etaSpan(tr,UI.f,1,' · ')}</dd><dt>Seat</dt><dd>${UI.seat||'Not selected'}</dd></dl>
  <label>Passenger type<select data-chg="cat">${Object.keys(CATS).map(k=>`<option ${UI.cat===k?'selected':''}>${k}</option>`).join('')}</select></label>
  <dl><dt>Base fare  </dt><dd>${peso(fr.base)}</dd><dt>Discount</dt><dd>−${peso(fr.disc)}</dd><dt>Total</dt><dd style="font-size:1.2rem">${peso(fr.total)}</dd></dl>
  ${UI.cat!=='Regular'?'<p class="mut" style="font-size:12.5px">A valid ID for this passenger type must be shown when boarding.</p>':''}
@@ -489,9 +559,10 @@ function book(){if(S.pax==='OP')return toast('Switch to a passenger account to b
  const fr=fare(tr.op,f,t,cat),id='BK'+nid();
  S.bookings.push({id,tripId:tr.id,seat,from:f,to:t,pax:px,name:pname,cat,status:'Booked',pay:'Unpaid',base:fr.base,disc:fr.disc,fare:fr.total,ts:stamp()});
  delete S.holds[hk(tr,seat)];
- note(px,`Seat ${seat} booked, ${STOPS[f].n} → ${STOPS[t].n}. Pay in My Bookings to check in.`);
+ const eta=etaLabel(etaTarget(tr,f),STOPS[f].n);
+ note(px,`Seat ${seat} booked, ${STOPS[f].n} → ${STOPS[t].n}. ${eta?eta+' ':''}(${stopTime(tr,f)}). Pay in My Bookings to check in.`);
  opNote(`🪑 ${pname} booked Seat ${seat} · ${STOPS[f].n} → ${STOPS[t].n} (${tr.op.id} ${tr.time})`,'booked');
- S.log.unshift({ts:stamp(),who:pname,action:'Seat booked',rec:id});UI.seat=null;dlg.close();S.view='trips';render();scrollTo(0,0);toast('Seat booked. Pay to check in.')}
+ S.log.unshift({ts:stamp(),who:pname,action:'Seat booked',rec:id});UI.seat=null;dlg.close();S.view='trips';render();scrollTo(0,0);toast('Seat booked. '+(eta?eta+'. ':'')+'Pay to check in.')}
 /* Paying = checking in. Simulated with the prototype transit card. */
 function payBooking(id){const b=S.bookings.find(x=>x.id===id&&x.pax===S.pax);if(!b)return;if(b.status!=='Booked')return toast('This booking is already paid.');if(b.xfer)return toast('Respond to the transfer offer first.');
  const tr=tripById(b.tripId),num=PAX[S.pax].card,c=S.cards[num];
@@ -549,6 +620,7 @@ function stageIdx(s){return{'Booked':0,'Checked in':1,'Completed':2}[s]}
 function rTrips(){const mine=S.bookings.filter(b=>b.pax===S.pax).reverse(),ns=S.notes.filter(n=>n.pax===S.pax),w=S.watch.filter(x=>x.pax===S.pax);
  app.innerHTML=`<div class="wrap sec"><h2>My bookings</h2><p class="mut">Booked: you reserved a seat. Checked in: you paid. Completed: the operator confirmed you got off.</p><div class="list">${mine.length?mine.map(b=>{const tr=tripById(b.tripId),i=stageIdx(b.status);return`<article class="card"><div class="meta"><b style="color:var(--ink)">${esc(tr.op.id)} · ${tr.bus}</b><span>${tr.date} ${tr.time}</span><span>Seat ${b.seat}</span><span>${peso(b.fare)}</span><span class="badge ${b.status==='Completed'?'g':b.status==='Checked in'?'b':'o'}">${b.status}</span></div>
  <h3 style="margin:8px 0 0">${STOPS[b.from].n} → ${STOPS[b.to].n}</h3>
+ ${b.status!=='Completed'?`<p style="margin:6px 0 0"><b style="color:var(--teal)">${etaSpan(tr,b.from,0,'⏱ ')}</b> <span class="mut">${etaTarget(tr,b.from)-Date.now()>ETA_MAX?'':'· due '+stopTime(tr,b.from)}</span></p>`:''}
  <div class="steps">${STAGES.map((s,k)=>`<span class="${k<=i?'on':''}">${s}</span>`).join('')}</div>${payLine(b)}${b.movedFrom?`<p class="mut" style="margin:8px 0 0">Transferred from bus ${esc(tripById(b.movedFrom.trip).bus)}, seat ${b.movedFrom.seat}. Your payment carried over.</p>`:''}${b.xfer?offerBox(b):''}<div style="margin:8px 0"><button class="btn g sm" data-act="rptbus" data-id="${b.id}">Report a problem with this bus</button></div>
  <div style="display:flex;gap:8px;flex-wrap:wrap">${b.status==='Booked'&&!b.xfer?`<button class="btn t sm" data-act="paybk" data-id="${b.id}">Pay ${peso(b.fare)} & check in</button><button class="btn g sm" data-act="cancel" data-id="${b.id}">Cancel booking</button>`:''}${b.status==='Checked in'?`<button class="btn sm" data-act="rcpt" data-id="${b.id}">Ticket & receipt</button>${b.exit||b.xfer?(b.exit?'<span class="badge o">Operator told: getting off</span>':''):`<button class="btn g sm" data-act="gettingoff" data-id="${b.id}">I'm getting off</button>`}`:''}${b.status==='Completed'&&b.pay==='Paid'?`<button class="btn g sm" data-act="rcpt" data-id="${b.id}">Receipt</button>`:''}</div></article>`}).join(''):`<div class="empty"><b>No bookings yet.</b><br>Find a bus and book a seat to see it here.</div>`}</div>
  ${w.length?`<h3 style="margin-top:24px">Waiting for a seat</h3>${w.map(x=>`<p class="mut">Seat ${x.seat} on ${esc(x.tripId.split('|')[1])} ${x.tripId.split('|')[2]}, from ${STOPS[x.from].n}. We will notify you once the previous passenger's exit is confirmed.</p>`).join('')}`:''}
@@ -834,13 +906,48 @@ const ACT={
 document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(b){if(b.tagName==='A')e.preventDefault();ACT[b.dataset.act]?.(b.dataset)}});
 document.addEventListener('change',e=>{const k=e.target.dataset.chg;if(!k)return;if(k==='cat'){UI.cat=e.target.value;rSeat()}if(k==='opTrip'){UI.opTrip=e.target.value;rOps()}if(k==='opDate'){UI.opDate=e.target.value||today();UI.opTrip=null;rOps()}if(k==='opStop'){UI.opStop=+e.target.value;rOps()}if(k==='inc')incSet(e.target.dataset.f,e.target.type==='checkbox'?e.target.checked:e.target.value);if(k==='incseat'&&UI.inc)UI.inc.assign[e.target.dataset.id]=+e.target.value||null;if(k==='trk'){UI.trk=e.target.value;rTrack()}});
 document.addEventListener('input',e=>{if(e.target.id==='prog'){UI.prog=e.target.value/1000;moveBus();return}if(e.target.dataset.inp==='q'){UI.q=e.target.value;const p=e.target.selectionStart;rRoutes();const q=$('#q');q.focus();q.setSelectionRange(p,p)}});
-document.addEventListener('submit',e=>{if(e.target.id!=='sf')return;e.preventDefault();const f=+$('#sf-f').value,t=+$('#sf-t').value;
- if(t<=f)return $('#sf-msg').textContent='Choose a destination that comes after your boarding stop.';
- if(!$('#sf-d').value||$('#sf-d').value<today())return $('#sf-msg').textContent='Choose today or a later date.';
- Object.assign(UI,{f,t,date:$('#sf-d').value,time:$('#sf-h').value,op:$('#sf-o').value});res()});
-document.addEventListener('change',e=>{if(e.target.id==='sf-f'){UI.t=+$('#sf-t').value;UI.f=+e.target.value;UI.t=Math.max(UI.t,UI.f+1);const d=$('#sf-d').value;if(d&&d>=today())UI.date=d;UI.time=$('#sf-h').value;UI.op=$('#sf-o').value;rFind()}});
+/* ----- From / To: type to search stops, tap a suggestion ----- */
+const nz=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+STOPS.forEach(s=>{s.k1=nz(s.n+' '+(s.a||[]).join(' '));s.k2=nz(s.m)});
+const SG={w:null,list:[],act:-1,dirty:false},sgOk=(w,i)=>w==='f'?i<STOPS.length-1:i>(UI.f==null?0:UI.f);
+function sgMatch(q){const t=nz(q).split(' ').filter(Boolean),j=t.join(' ');
+ return STOPS.map((s,i)=>{if(!t.length)return{i,r:0};const nm=nz(s.n),w1=s.k1.split(' '),w2=s.k2.split(' ');
+  if(!t.every(x=>w1.some(y=>y.startsWith(x))||w2.some(y=>y.startsWith(x))))return null;
+  return{i,r:nm===j?-1:nm.startsWith(j)?0:t.every(x=>w1.some(y=>y.startsWith(x)))?1:2}}).filter(Boolean).sort((a,b)=>a.r-b.r||a.i-b.i)}
+function sgOpen(w,keep){const inp=$('#sf-'+w),ul=$('#sf-'+w+'-l');if(!inp||!ul)return;
+ if(!SG.dirty||!inp.value.trim()){ul.hidden=true;inp.setAttribute('aria-expanded','false');inp.removeAttribute('aria-activedescendant');if(SG.w===w){SG.w=null;SG.act=-1}return}
+ const all=sgMatch(SG.dirty?inp.value:''),ok=all.filter(m=>sgOk(w,m.i)),shown=SG.dirty?ok.slice(0,8):ok;
+ SG.w=w;SG.list=shown.map(m=>m.i);if(!keep)SG.act=SG.dirty&&shown.length?0:-1;
+ ul.innerHTML=shown.length?shown.map((m,k)=>{const s=STOPS[m.i];return`<li role="option" id="sf-${w}-o${k}" data-sgi="${m.i}" aria-selected="${k===SG.act}">${esc(s.n)}${nz(s.m).startsWith(nz(s.n))?'':`<small>${esc(s.m)}</small>`}</li>`}).join(''):
+  `<li class="none" role="option" aria-disabled="true">${all.length?(w==='t'?'Buses on this route only go toward '+esc(STOPS[STOPS.length-1].n)+', so you can’t go there from '+esc(STOPS[UI.f==null?0:UI.f].n)+'.':'That is the last stop, so nobody boards there.'):'No matching stop. Try another spelling.'}</li>`;
+ ul.hidden=false;inp.setAttribute('aria-expanded','true');SG.act>=0?inp.setAttribute('aria-activedescendant',`sf-${w}-o${SG.act}`):inp.removeAttribute('aria-activedescendant')}
+function sgClose(){document.querySelectorAll('.sgl').forEach(u=>u.hidden=true);document.querySelectorAll('.sg input').forEach(i=>{i.setAttribute('aria-expanded','false');i.removeAttribute('aria-activedescendant')});SG.w=null;SG.act=-1}
+function sgCommit(w,i,fire){if(w==='f'){UI.f=i;if(UI.t==null||UI.t<=i){UI.t=null;const t=$('#sf-t');if(t)t.value=''}}else UI.t=i;
+ const el=$('#sf-'+w);if(el)el.value=STOPS[i].n;SG.dirty=false;if(SG.w===w)sgClose();if(fire&&el)el.dispatchEvent(new Event('change',{bubbles:true}))}
+function sgResolve(w,first){const el=$('#sf-'+w);if(!el)return null;const q=nz(el.value);if(!q)return null;
+ const all=sgMatch(el.value).filter(m=>sgOk(w,m.i)),ex=all.find(m=>nz(STOPS[m.i].n)===q||(STOPS[m.i].a||[]).some(a=>nz(a)===q)),hit=ex||(first&&all[0]);return hit?hit.i:null}
+document.addEventListener('focusin',e=>{const id=e.target.id;if(id==='sf-f'||id==='sf-t'){SG.dirty=false;const el=e.target;setTimeout(()=>el.select(),0);sgClose()}});
+document.addEventListener('input',e=>{const id=e.target.id;if(id==='sf-f'||id==='sf-t'){SG.dirty=true;sgOpen(id.slice(3))}});
+document.addEventListener('keydown',e=>{const id=e.target.id;if(id!=='sf-f'&&id!=='sf-t')return;const w=id.slice(3),ul=$('#sf-'+w+'-l'),open=!!ul&&!ul.hidden;
+ if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();if(!open)return sgOpen(w);const n=SG.list.length;if(!n)return;SG.act=(SG.act+(e.key==='ArrowDown'?1:-1)+n)%n;sgOpen(w,true);const li=ul.children[SG.act];if(li&&li.scrollIntoView)li.scrollIntoView({block:'nearest'})}
+ else if(e.key==='Enter'&&open&&SG.act>=0&&SG.list[SG.act]!=null){e.preventDefault();sgCommit(w,SG.list[SG.act],true)}
+ else if(e.key==='Escape'&&open){e.preventDefault();e.stopPropagation();sgClose()}},true);
+document.addEventListener('mousedown',e=>{const t=e.target;if(t.closest&&t.closest('.sgl li')){e.preventDefault();return}if(!(t.closest&&t.closest('.sg')))sgClose()});
+document.addEventListener('click',e=>{const li=e.target.closest&&e.target.closest('.sgl li[data-sgi]');if(li)sgCommit(li.parentNode.id.replace(/^sf-|-l$/g,''),+li.dataset.sgi,true)});
+document.addEventListener('focusout',e=>{const id=e.target.id;if(id!=='sf-f'&&id!=='sf-t')return;const w=id.slice(3),el=e.target;
+ setTimeout(()=>{if(document.activeElement===el)return;if(SG.dirty){const i=sgResolve(w,false);if(i!=null)sgCommit(w,i,false)}if(SG.w===w)sgClose()},120)});
+document.addEventListener('submit',e=>{if(e.target.id!=='sf')return;e.preventDefault();const msg=$('#sf-msg');sgClose();
+ const f=sgResolve('f',true);if(f==null)return msg.textContent='Choose your boarding stop (From) from the suggestions.';
+ UI.f=f;const t=sgResolve('t',true);
+ if(t==null){const tx=$('#sf-t').value;return msg.textContent=tx&&sgMatch(tx).length?'Choose a destination that comes after your boarding stop.':'Choose your destination (To) from the suggestions.'}
+ if(!$('#sf-d').value||$('#sf-d').value<today())return msg.textContent='Choose today or a later date.';
+ UI.t=t;$('#sf-f').value=STOPS[f].n;$('#sf-t').value=STOPS[t].n;msg.textContent=sfMsg();
+ Object.assign(UI,{date:$('#sf-d').value,op:$('#sf-o').value,slot:$('#sf-s').value});res()});
 
 dlg.addEventListener('close',()=>{if(UI.mode==='seat'){for(const k in S.holds)if(S.holds[k].pax===S.pax)delete S.holds[k];UI.seat=null;save();if(S.view==='find')res()}UI.mode=''});
+/* trip countdowns: update every 20 s; when a bus passes the stop, refresh the list so it drops out */
+setInterval(()=>{let crossed=false;document.querySelectorAll('.eta').forEach(el=>{const t=+el.dataset.t;{const l=etaLabel(t,el.dataset.n,!!el.dataset.short);el.textContent=l?(el.dataset.pre||'')+l:''}if(el.dataset.live==='1'&&t<=Date.now()){el.dataset.live='0';crossed=true}});
+ if(crossed&&!dlg.open){if($('#results'))res();else if(S.view==='trips')rTrips()}},20000);
 /* seat-hold countdown: expired holds are released automatically */
 setInterval(()=>{if(!dlg.open||UI.mode!=='seat')return;sweep();const h=$('#hold');if(UI.seat&&!S.holds[hk(tripById(UI.trip),UI.seat)]){UI.seat=null;toast('Seat hold expired and was released.');rSeat()}else if(h){const x=S.holds[hk(tripById(UI.trip),UI.seat)];h.textContent=Math.max(0,Math.round((x.exp-Date.now())/1000))}},1000);
 addEventListener('storage',e=>{if(e.key===KEY&&e.newValue&&$('#trkinfo')){try{S=JSON.parse(e.newValue);moveBus()}catch(x){}}});setInterval(()=>{if($('#trkinfo')&&!PLAY)moveBus()},5000);
@@ -1778,8 +1885,8 @@ const LAST=STOPS.length-1;
 const hm=m=>{const h=Math.floor(m/60),r=m%60;return(h?h+' h ':'')+r+' min'};
 
 /* ---------- stop recognition (names and common nicknames) ---------- */
-const ALIAS=[];STOPS.forEach((s,i)=>ALIAS.push([nrm(s.n),i]));
-[['sta cruz','Sta. Cruz'],['santa cruz','Sta. Cruz'],['quezon city','Quezon City (Cubao)'],['cubao','Quezon City (Cubao)'],['qc','Quezon City (Cubao)'],['alabang','Muntinlupa'],['losbanos','Los Baños'],['sta rosa','Santa Rosa'],['pasay','Pasay (Buendia)'],['buendia','Pasay (Buendia)']].forEach(([a,nm])=>{const i=IX(nm);if(i>=0)ALIAS.push([a,i])});
+const ALIAS=[];STOPS.forEach((s,i)=>ALIAS.push([nrm(s.n),i]));STOPS.forEach((s,i)=>(s.a||[]).forEach(a=>ALIAS.push([nrm(a),i])));
+[['sta cruz','Sta. Cruz'],['santa cruz','Sta. Cruz'],['quezon city','Quezon City (Cubao)'],['cubao','Quezon City (Cubao)'],['qc','Quezon City (Cubao)'],['alabang','Muntinlupa'],['losbanos','Los Baños Municipal Hall'],['calamba','SM Calamba'],['sta rosa','Santa Rosa'],['pasay','Pasay (Buendia)'],['buendia','Pasay (Buendia)']].forEach(([a,nm])=>{const i=IX(nm);if(i>=0)ALIAS.push([a,i])});
 function stopsIn(n){const hits=[];for(const[a,i]of ALIAS){const m=new RegExp('\\b'+a+'\\b').exec(n);if(m&&!hits.some(h=>h.i===i))hits.push({i,p:m.index})}
  let r=hits.sort((x,y)=>x.p-y.p).map(h=>h.i);if(r.length>1&&/\bto\b.*\bfrom\b/.test(n))r=r.reverse();return r}
 const FILLER=new Set('where is what about tell me the a an at in of to from stop stops station terminal info information located location show saan nasaan ang ba po ng sa find go going how far get do i my bus buses route and for'.split(' '));
@@ -1810,7 +1917,7 @@ const I=[
 {id:'stationdir',kw:[/\bdirectory\b/,/\bsearch (a )?stations?\b/,/\bfind (a )?station\b/,/\bstation (address|hours|info|details)\b/,/\baddress\b/,/\bopening hours\b/,/\blandmarks?\b/],guide:'stations',
  a:()=>`The <b>Station directory</b> (on Routes & Stations) lets you search stops by name or city. Station addresses, opening hours and landmarks are placeholders and not verified yet.`},
 {id:'search',kw:[/\bfind (a |the )?(bus|trip)/,/\bsearch (for )?(a |the )?(bus|trip|buses)/,/\bsearch (form|button)\b/,/\bhanap\b/],guide:'search',
- a:()=>`To find a bus: open <b>Find a Bus</b>, choose <b>From</b>, <b>To</b> and <b>Date</b> (time of day and company are optional), then press <b>Search buses</b>. Each result shows departure, fare and seats free for your segment. This prototype allows 1 passenger per booking.`},
+ a:()=>`To find a bus: open <b>Find a Bus</b>, type your <b>From</b> and <b>To</b> stops (tap a suggestion) and pick a <b>Date</b> (company is optional), then press <b>Search buses</b>. Each result shows departure, fare, seats free for your segment, and a "Bus reaches" countdown that appears only when the bus is within 3 hours (3 hrs, 2 hrs, 1 hr, then minutes). This prototype allows 1 passenger per booking.`},
 {id:'mybookings',kw:[/\bmy bookings?\b/,/\bbookings\b/,/\bbooking status\b/,/\bchecked in\b/,/\b(booking|trip|payment|transaction) history\b/,/\bmy trips?\b/],guide:'bookings',
  a:()=>`<b>My Bookings</b> lists your trips and notifications. Status flow: <b>Booked</b> (seat reserved) → <b>Checked in</b> (paid) → <b>Completed</b> (the operator confirmed you got off). You must be signed in.`},
 {id:'book',kw:[/\bbook/,/\breserv/,/\bmag ?book\b/,/\bbuy (a )?ticket/,/\bget (a )?ticket/,/\b(pick|choose|select) (a |my )?seats?\b/,/\bseats?\b/,/\bupuan\b/,/\bsakay\b/],guide:'book',
@@ -1915,11 +2022,11 @@ const PAX={sel:outSel,text:()=>menuOpen()?'Press “Sign out”. Then sign in wi
 const OP={sel:()=>authOpen()?'#asub':(signedIn()?outSel():'#acct [data-auth="signin"]'),text:()=>signedIn()?(menuOpen()?'Press “Sign out”. Then sign in with an operator account.':'Operator pages need an Operator staff account. Click your name here to sign out first.'):'Operator pages need an Operator staff account. Press Sign in and use the operator account.',until:()=>S.pax==='OP',skip:()=>S.pax==='OP'};
 const AUTH={sel:()=>authOpen()?'#asub':'#acct [data-auth="signin"]',text:'You need to be signed in for this. Press Sign in (or Create account if you’re new). I’ll continue once you’re in.',until:signedIn,skip:signedIn};
 const SEARCH=[N('find'),
- {sel:'#sf-f',text:'Choose where you’ll board (From).',on:'change'},
- {sel:'#sf-t',text:'Choose your destination (To).',on:'change'},
+ {sel:'#sf-f',text:'Type where you’ll board (From), then tap a suggestion.',on:'change'},
+ {sel:'#sf-t',text:'Type your destination (To), then tap a suggestion.',on:'change'},
  {sel:'#sf-d',text:'Pick your travel date (today or later), then press Next.',manual:true},
  {sel:'#sf button[type="submit"]',text:'Press “Search buses”.'},
- {sel:'#results [data-act="open"]:not([disabled])',text:'Pick a trip and press “Select seat”.',miss:'No trip with free seats matched. Try another time or date, then press Search buses again.'}];
+ {sel:'#results [data-act="open"]:not([disabled])',text:'Pick a trip and press “Select seat”.',miss:'No trip with free seats matched. Try another date, then press Search buses again.'}];
 const SEAT=[
  {sel:'#dlg .seat.free',text:'Tap a green seat to hold it. Yellow seats are held or waiting for the previous rider’s exit. Seat 1 is the driver’s.',miss:'No green seat is free for your stops on this bus. Close this window and pick another trip.'},
  {sel:'#dlg [data-chg="cat"]',text:'Choose your passenger type (Student, Senior and PWD get 20% off), then press Next.',manual:true},
