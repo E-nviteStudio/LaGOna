@@ -614,10 +614,27 @@ function registerCard(v){v=norm(v);if(v.length<8)return toast('Enter at least 8 
  if(!S.cards[v])S.cards[v]={owner:S.pax,bal:0,status:'Active'};PAX[S.pax].card=v;S.link[S.pax]=v;logIt('Card linked',mask(v));render();toast('Card linked. Top up to use it.')}
 function nfcRead(sn){sn=norm(sn);if(!S.cards[sn]){if(!confirm('New card '+mask(sn)+'. Link it to your account?'))return;registerCard(sn)}
  if(S.cards[sn].owner!==S.pax)return toast('That card belongs to another passenger.');UI.card=sn;rSeat()}
+const rcKm=b=>Math.round((STOPS[b.to].km-STOPS[b.from].km)*10)/10;
+/* Draws the receipt on a canvas and downloads it as a PNG photo (no server needed). */
+function dlReceipt(id){const b=S.bookings.find(x=>x.id===id);if(!b||!b.rc)return toast('Pay first to get a receipt.');const tr=tripById(b.tripId),W=760,P=44,
+ rows=[['Receipt no.',b.rc],['Transaction',b.txRef],['Booking ref',b.id],['Passenger',b.name],['Operator',`${tr.op.id} (${tr.op.type.trim()})`],['Bus no.',tr.bus],['Trip',`${tr.date} · departs ${tr.time}`],['Boarding',STOPS[b.from].n],['Destination',STOPS[b.to].n],['Distance',rcKm(b)+' km'],['Seat',String(b.seat)],['Passenger type',b.cat],['Base fare',peso(b.base)],['Discount',`−${peso(b.disc)}`],['Payment',b.method||'Card'],['Paid',b.paidAt||'']],
+ H=250+rows.length*40+345,c=document.createElement('canvas');c.width=W*2;c.height=H*2;const x=c.getContext('2d');x.scale(2,2);
+ const F='system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif';x.fillStyle='#fff';x.fillRect(0,0,W,H);
+ const g=x.createLinearGradient(0,0,W,0);g.addColorStop(0,'#0b1f4a');g.addColorStop(1,'#16336f');x.fillStyle=g;x.fillRect(0,0,W,150);
+ x.fillStyle='#fff';x.font=`800 38px ${F}`;x.fillText(BRAND,P,70);x.font=`600 18px ${F}`;x.fillStyle='#c9d4f0';x.fillText('Official trip receipt · demo',P,100);
+ x.fillStyle='#f4c430';x.font=`800 16px ${F}`;x.fillText(`${tr.op.id.toUpperCase()} · ${rcKm(b)} KM`,P,128);
+ let y=200;x.textBaseline='alphabetic';rows.forEach(([k,v],i)=>{if(i%2===0){x.fillStyle='#f3f5f9';x.fillRect(P-14,y-27,W-2*P+28,40)}x.fillStyle='#5b6784';x.font=`600 16px ${F}`;x.fillText(k,P,y);x.fillStyle='#14213d';x.font=`700 17px ${F}`;x.textAlign='right';x.fillText(String(v),W-P,y,430);x.textAlign='left';y+=40});
+ y+=18;x.fillStyle='#0b1f4a';x.fillRect(P-14,y-30,W-2*P+28,70);x.fillStyle='#fff';x.font=`700 20px ${F}`;x.fillText('AMOUNT PAID',P,y+14);x.fillStyle='#f4c430';x.font=`800 34px ${F}`;x.textAlign='right';x.fillText(peso(b.fare),W-P,y+16);x.textAlign='left';y+=96;
+ const q=document.querySelector('#qrbox canvas')||document.querySelector('#qrbox img')||document.querySelector('#qrbox svg');
+ const done=()=>{x.fillStyle='#5b6784';x.font=`600 13px ${F}`;x.textAlign='center';x.fillText('Show this QR to staff when boarding.',W/2,H-62);x.font=`12px ${F}`;x.fillText(tcode(b),W/2,H-42,W-2*P);x.fillText('Demo receipt: sample data, not a legal receipt.',W/2,H-22);
+  c.toBlob(bl=>{const a=document.createElement('a');a.href=URL.createObjectURL(bl);a.download=`${BRAND}-receipt-${b.rc}.png`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);toast('Receipt image downloaded.')},'image/png')};
+ const draw=el=>{try{x.fillStyle='#fff';x.fillRect(W/2-86,y-6,172,172);x.drawImage(el,W/2-75,y+5,150,150)}catch(_){}};
+ if(q&&q.tagName==='svg'){const u=URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(q)],{type:'image/svg+xml'})),im=new Image();im.onload=()=>{draw(im);URL.revokeObjectURL(u);done()};im.onerror=done;im.src=u;return}
+ if(q)draw(q);done()}
 function showReceipt(id){const b=S.bookings.find(x=>x.id===id),tr=tripById(b.tripId);UI.mode='rc';
  openDlg(`<div class="dh"><h3 style="margin:0">Digital receipt & ticket</h3><button class="btn g sm" data-act="close">Close</button></div><div class="db"><div class="split"><div style="text-align:center"><div id="qrbox" style="display:inline-block;background:#fff;padding:8px;border-radius:8px"></div><p class="mut" style="font-size:12px">Show this QR to staff when boarding.<br><code style="word-break:break-all">${tcode(b)}</code></p><span class="badge g">${b.status}</span></div>
- <div><dl><dt>Receipt no.</dt><dd>${b.rc}</dd><dt>Transaction</dt><dd>${b.txRef}</dd><dt>Booking ref</dt><dd>${b.id}</dd><dt>Passenger</dt><dd>${esc(b.name)}</dd>${b.card?`<dt>Card</dt><dd>${mask(b.card)}</dd>`:''}<dt>Operator / bus</dt><dd>${esc(tr.op.id)} · ${tr.bus}</dd><dt>Trip</dt><dd>${tr.date} · departs ${tr.time}</dd><dt>Boarding → destination</dt><dd>${STOPS[b.from].n} → ${STOPS[b.to].n}</dd><dt>Seat</dt><dd>${b.seat}</dd><dt>Base fare</dt><dd>${peso(b.base)}</dd><dt>Discount (${b.cat})</dt><dd>−${peso(b.disc)}</dd><dt>Amount paid</dt><dd>${peso(b.fare)}</dd>${payRows(b)}</dl>${trail(b)}
- <div class="noprint" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" onclick="window.print()">Print / save as PDF</button><button class="btn g sm" data-act="email">Email receipt</button></div></div></div></div>`);drawQR(tcode(b))}
+ <div><dl><dt>Receipt no.</dt><dd>${b.rc}</dd><dt>Transaction</dt><dd>${b.txRef}</dd><dt>Booking ref</dt><dd>${b.id}</dd><dt>Passenger</dt><dd>${esc(b.name)}</dd>${b.card?`<dt>Card</dt><dd>${mask(b.card)}</dd>`:''}<dt>Operator</dt><dd>${esc(tr.op.id)} (${esc(tr.op.type.trim())})</dd><dt>Bus no.</dt><dd>${tr.bus}</dd><dt>Trip</dt><dd>${tr.date} · departs ${tr.time}</dd><dt>Boarding → destination</dt><dd>${STOPS[b.from].n} → ${STOPS[b.to].n}</dd><dt>Distance</dt><dd>${rcKm(b)} km</dd><dt>Seat</dt><dd>${b.seat}</dd><dt>Base fare</dt><dd>${peso(b.base)}</dd><dt>Discount (${b.cat})</dt><dd>−${peso(b.disc)}</dd><dt>Amount paid</dt><dd>${peso(b.fare)}</dd>${payRows(b)}</dl>${trail(b)}
+ <div class="noprint" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" onclick="window.print()">Print / save as PDF</button><button class="btn t sm" data-act="dlrc" data-id="${b.id}">⬇ Download receipt (image)</button></div></div></div></div>`);drawQR(tcode(b))}
 /* ========= MY BOOKINGS ========= */
 const STAGES=['Booked','Checked in','Completed'];
 function stageIdx(s){return{'Booked':0,'Checked in':1,'Completed':2}[s]}
@@ -889,7 +906,7 @@ const ACT={
  vscan:()=>camScan(validateTicket),vcode:()=>validateTicket($('#tc').value),
  link:()=>registerCard($('#lc').value),
  usecard:()=>{const v=norm($('#cn').value);if(!S.cards[v]){return toast('Card not found. Demo cards: 4500 1234 0001 / 0002.')}if(S.cards[v].owner!==S.pax)return toast('That card is linked to another passenger.');UI.card=v;rSeat()},
- book,close:()=>dlg.close(),email:()=>toast('Email receipts need an email service. Placeholder only.'),
+ book,close:()=>dlg.close(),dlrc:d=>dlReceipt(d.id),
  rcpt:d=>showReceipt(d.id),
  cancel:d=>{const i=S.bookings.findIndex(x=>x.id===d.id&&x.pax===S.pax);if(i<0)return;const b=S.bookings[i];if(b.status!=='Booked')return toast('Only unpaid bookings can be cancelled.');if(b.xfer)return toast('Respond to the transfer offer first.');S.bookings.splice(i,1);logIt('Booking cancelled',b.id);render();toast('Booking cancelled. Seat released.')},
  paybk:d=>payBooking(d.id),
@@ -2053,7 +2070,7 @@ const I=[
 {id:'card',kw:[/\bcards?\b/,/\btransit\b/,/\bbalance\b/,/\bwallet\b/],guide:'card',
  a:()=>`The <b>Transit Card</b> page is your prototype wallet: see your balance and transactions, top up, link a card, or block a lost card. You pay for bookings from it. Demo cards: 4500 1234 0001 and 0002.`},
 {id:'ticket',kw:[/\bqr\b/,/\btickets?\b/,/\breceipts?\b/,/\bresibo\b/,/\bprint/,/\bdownload/,/\be ticket\b/,/\bboarding pass\b/,/\bpdf\b/],guide:'receipt',
- a:()=>`After paying, press <b>Ticket & receipt</b> in My Bookings. You get a QR ticket to show staff when boarding and a receipt with reference numbers. You can print it or save it as PDF (“Email receipt” is only a placeholder).`},
+ a:()=>`After paying, press <b>Ticket & receipt</b> in My Bookings. You get a QR ticket to show staff when boarding and a receipt with reference numbers. You can download the receipt as an image or print it / save it as PDF.`},
 {id:'cancel',kw:[/\bcancel/,/\brefund/,/\bundo\b/,/\bkansel\b/,/\bibalik\b/],guide:'cancel',
  a:()=>`You can cancel from <b>My Bookings</b> only while the booking is unpaid (status Booked); the seat is then released. Paid bookings can't be cancelled in this prototype. If a bus is taken out of service and you decline the transfer offer, your paid fare returns to your transit card.`},
 {id:'gettingoff',kw:[/\bgetting off\b/,/\bget off\b/,/\balight/,/\bexit\b/,/\bbababa\b/,/\bbaba\b/,/\bmy stop\b/,/\bdrop ?off\b/],guide:'gettingoff',
