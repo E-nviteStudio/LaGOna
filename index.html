@@ -4,21 +4,7 @@
 <meta charset="utf-8">
 <meta name="theme-color" content="#0b1f4a">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<!--
-IMPROVEMENT NOTES (added review comments; no behavior was changed in this file)
-Search "IMPROVE:" to find each note. Summary of priorities:
- 1. Replace localStorage with a real backend + database (accounts, trips, seats, payments, tickets).
- 2. Replace the fake transit-card payment with a Philippine payment gateway (sandbox first).
- 3. Sign tickets on the server; stop generating/hashing them in the browser.
- 4. Enter only verified operators, routes, schedules and fares; remove hash-generated trips and random occupancy.
- 5. Show live tracking only with a real GPS source; otherwise label it a route map.
- 6. Add SEO/meta, legal pages (Terms, Privacy, FAQ, Contact, About), and a footer with real contact info.
- 7. Self-host Leaflet/qrcode (pin versions, add integrity hashes) and add a Content-Security-Policy.
--->
 
-<!-- IMPROVE: SEO and sharing. Make the title descriptive (e.g. "Laguna Smart Bus | Book Bus Seats, Laguna to Metro Manila"), then add:
-     <meta name="description" content="...">, <link rel="canonical">, Open Graph/Twitter tags, a favicon, and a manifest.
-     This single-page app has no real URLs; consider hash or path routes (#/routes) so pages can be bookmarked and indexed. -->
 
 <title>LaGOna</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -353,11 +339,17 @@ const STOPS=[{n:'Pagsanjan',km:0,m:'Pagsanjan, Laguna',lat:14.2733,lng:121.4547}
 {n:'Makati',km:119,m:'Makati City',lat:14.5547,lng:121.0244},
 {n:'Pasay (Buendia)',km:125,m:'Pasay City, Buendia',a:['Pasay','Buendia'],lat:14.5543,lng:121.0123},
 {n:'Quezon City (Cubao)',km:137,m:'Quezon City, Cubao',a:['Quezon City','Cubao','QC'],lat:14.6197,lng:121.0537}];
+const SPb=b=>SPo(tripById(b.tripId)),SPop=()=>SPo(UI.opTrip&&tripById(UI.opTrip)),SPk=()=>SPo(tripById(UI.trk));
+const CUT=STOPS.findIndex(s=>s.n==='Sta. Cruz');STOPS.splice(0,CUT);{const K0=STOPS[0].km;STOPS.forEach(s=>s.km=Math.round((s.km-K0)*10)/10)} // Sta. Cruz is the end of the line: no Pagsanjan or earlier stops
 const IX=n=>STOPS.findIndex(s=>s.n===n); // sample distances, not official
-const OPS=[{id:'LLI',type:'Aircon  ',times:['05:30','08:15','13:00','17:45'],ann:'Sample announcement: no active advisories.'},
-{id:'HM Transport',type:'Aircon  ',times:['06:00','09:30','14:15','18:30'],ann:'Sample announcement: schedule is for demo only.'},
-{id:'DLTB Co.',type:'Ordinary  ',times:['05:00','07:45','12:30','16:00'],ann:'Sample announcement: extra trips on weekends (demo).'},
-{id:'JAC Liner',type:'Deluxe  ',times:['06:45','10:00','15:00','19:00'],ann:'Sample announcement: seat holds last 2 minutes.'}];
+/* RETURN DIRECTION (sample): Cubao and the other Metro Manila / Laguna stops going back to Sta. Cruz only (Sta. Cruz is the end of the line). km = distance from Cubao. */
+const KMAX=STOPS[STOPS.length-1].km,RSTOPS=STOPS.slice().reverse().map(s=>({...s,km:Math.round((KMAX-s.km)*10)/10}));
+const SPo=tr=>tr&&tr.rev?RSTOPS:STOPS; // stop list a trip runs on
+const FS=()=>UI.rev?RSTOPS:STOPS; // stop list for the Find a Bus search direction
+const OPS=[{id:'LLI',type:'Aircon  ',rtimes:['06:15','09:00','13:45','18:30'],times:['05:30','08:15','13:00','17:45'],ann:'Sample announcement: no active advisories.'},
+{id:'HM Transport',type:'Aircon  ',rtimes:['06:30','10:15','15:00','19:15'],times:['06:00','09:30','14:15','18:30'],ann:'Sample announcement: schedule is for demo only.'},
+{id:'DLTB Co.',type:'Ordinary  ',rtimes:['05:30','08:30','13:15','16:45'],times:['05:00','07:45','12:30','16:00'],ann:'Sample announcement: extra trips on weekends (demo).'},
+{id:'JAC Liner',type:'Deluxe  ',rtimes:['07:15','10:45','15:30','19:45'],times:['06:45','10:00','15:00','19:00'],ann:'Sample announcement: seat holds last 2 minutes.'}];
 /* FARES: LTFRB Provincial General Fare Guides (PUB Regular Aircon and PUB Deluxe), effective September 28, 2026.
  * Add-on method: fare = rate per km x distance, rounded to the nearest 25 centavos. The published tables start at 5 km, so 5 km is the minimum charged distance.
  *   Aircon: Regular P2.45/km, Student/Elderly/PWD P1.96/km (20% discount)
@@ -383,9 +375,9 @@ const today=()=>ymd(new Date()), mask=c=>'•••• '+String(c).slice(-4);
 const norm=v=>String(v||'').replace(/[^0-9a-f]/gi,'').toLowerCase(); // card ids: digits, or hex for NFC serials
 const hash=s=>[...s].reduce((a,c)=>(a*31+c.charCodeAt(0))>>>0,7);
 const fmtT=m=>{m=((m%1440)+1440)%1440;return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0')};
-const stopTime=(tr,i)=>fmtT(+tr.time.slice(0,2)*60+ +tr.time.slice(3)+Math.round(STOPS[i].km*MPK));
+const stopTime=(tr,i)=>fmtT(+tr.time.slice(0,2)*60+ +tr.time.slice(3)+Math.round(SPo(tr)[i].km*MPK));
 /* Countdown until the bus reaches boarding stop i (same estimate as departed(): trip start + km * MPK). */
-const etaTarget=(tr,i)=>new Date(tr.date+'T'+tr.time+':00').getTime()+Math.round(STOPS[i].km*MPK)*60000;
+const etaTarget=(tr,i)=>new Date(tr.date+'T'+tr.time+':00').getTime()+Math.round(SPo(tr)[i].km*MPK)*60000;
 /* Every ETA goes through etaLabel/etaFmt. Shown ONLY when the bus is within 3 hrs: hours and minutes (e.g. 2 hrs 30 min), never above 3 hrs. Further away: only the clock time (no countdown). */
 const ETA_MAX=180*60000;
 function etaFmt(ms){const m=Math.max(1,Math.ceil(ms/60000));
@@ -399,7 +391,7 @@ function etaLabel(target,n,short){const ms=target-Date.now();
  if(ms<=0)return short?'arriving now':'Bus is arriving at '+n+' now';
  if(ms>ETA_MAX){const d=new Date(target);return short?'':'Bus reaches '+n+' at '+fmtT(d.getHours()*60+d.getMinutes())} /* more than 3 hrs away: clock time only, no countdown */
  return short?'in about '+etaFmt(ms):'Bus reaches '+n+' in about '+etaFmt(ms)}
-function etaSpan(tr,i,short,pre){const t=etaTarget(tr,i),n=STOPS[i].n,l=etaLabel(t,n,short);return`<span class="eta" data-t="${t}" data-n="${esc(n)}" data-pre="${esc(pre||'')}" ${short?'data-short="1"':''} data-live="${t>Date.now()?1:0}">${l?esc((pre||'')+l):''}</span>`}
+function etaSpan(tr,i,short,pre){const t=etaTarget(tr,i),n=SPo(tr)[i].n,l=etaLabel(t,n,short);return`<span class="eta" data-t="${t}" data-n="${esc(n)}" data-pre="${esc(pre||'')}" ${short?'data-short="1"':''} data-live="${t>Date.now()?1:0}">${l?esc((pre||'')+l):''}</span>`}
 let tt;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),3200)}
 /* IMPROVE:
  * localStorage is not a database: data is per-browser, editable by the user, and lost when cleared. Use a transactional backend.
@@ -413,8 +405,9 @@ let S;try{S=Object.assign(fresh(),JSON.parse(localStorage.getItem(KEY))||{})}cat
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
 S.reports=S.reports||[];S.link=S.link||{};for(const k in S.link)if(PAX[k]&&S.cards[S.link[k]])PAX[k].card=S.link[k];
 /* Stop list v2 (more stops): remap saved stop indexes from the old 16-stop list so existing bookings keep their stops. */
-if(S.sv!==2){const OLD=['Pagsanjan','Sta. Cruz','Pila','Victoria','Bay','Los Baños','Calamba','Cabuyao','Santa Rosa','Biñan','San Pedro','Muntinlupa','Taguig','Makati','Pasay (Buendia)','Quezon City (Cubao)'],REN={'Los Baños':'Los Baños Municipal Hall','Calamba':'SM Calamba'},mv=i=>{const n=OLD[i];if(n==null)return i;const k=IX(REN[n]||n);return k<0?i:k};
- (S.bookings||[]).forEach(b=>{b.from=mv(b.from);b.to=mv(b.to)});(S.watch||[]).forEach(w=>{w.from=mv(w.from)});(S.incidents||[]).forEach(x=>{x.stop=mv(x.stop)});S.sv=2}
+if(S.sv===2){const d=CUT;(S.bookings||[]).forEach(b=>{b.from=Math.max(0,b.from-d);b.to=Math.max(1,b.to-d)});(S.watch||[]).forEach(w=>{w.from=Math.max(0,w.from-d)});(S.incidents||[]).forEach(x=>{x.stop=Math.max(0,x.stop-d)});S.sv=3}
+if(!S.sv){const OLD=['Pagsanjan','Sta. Cruz','Pila','Victoria','Bay','Los Baños','Calamba','Cabuyao','Santa Rosa','Biñan','San Pedro','Muntinlupa','Taguig','Makati','Pasay (Buendia)','Quezon City (Cubao)'],REN={'Los Baños':'Los Baños Municipal Hall','Calamba':'SM Calamba'},mv=i=>{const n=OLD[i];if(n==null)return i;const k=IX(REN[n]||n);return k<0?i:k};
+ (S.bookings||[]).forEach(b=>{b.from=mv(b.from);b.to=mv(b.to)});(S.watch||[]).forEach(w=>{w.from=mv(w.from)});(S.incidents||[]).forEach(x=>{x.stop=mv(x.stop)});S.sv=3}
 if(S.pax!=='OP'&&!PAX[S.pax])S.pax='A'; // real accounts re-apply their own identity once the session is restored
 S.txs.forEach(x=>{if(x.status==='Pending')x.status='Failed'}); // page closed mid-payment: nothing was charged
 /* Booking statuses are only: Booked (passenger reserved) > Checked in (passenger paid) > Completed (operator confirmed passenger got off). Older saved statuses are mapped onto these. */
@@ -439,7 +432,7 @@ const inSlot=(tr,i,k)=>{const sl=SLOTS.find(x=>x[0]===k);if(!sl||k==='all')retur
  * Trips are generated from fixed time lists and hash-based bus numbers for any date. Real trips must be entered by an authorized admin/operator
  * (operator, vehicle, route, date, departure, fare policy, booking cutoff, status) and only those should be shown.
  */
-function tripsFor(date){return OPS.flatMap(o=>o.times.map(t=>({id:`${date}|${o.id}|${t}`,date,op:o,time:t,bus:`${o.id.slice(0,3).toUpperCase().replace(/\W/g,'')}-${100+hash(o.id+t)%900}`})))}
+function tripsFor(date){return OPS.flatMap(o=>[0,1].flatMap(r=>(r?o.rtimes||[]:o.times).map(t=>({id:`${date}|${o.id}|${t}`+(r?'|R':''),date,op:o,time:t,rev:r,bus:`${o.id.slice(0,3).toUpperCase().replace(/\W/g,'')}-${100+hash(o.id+t+(r?'R':''))%900}`+(r?' ↩ Sta. Cruz':'')}))))}
 const tripById=id=>tripsFor(id.split('|')[0]).find(x=>x.id===id);
 const DRIVER=1; // seat 1 is the driver's seat: never bookable and never counted as a passenger seat (49 passenger seats: 2 to 50)
 /* IMPROVE:
@@ -455,7 +448,7 @@ function seeds(tr){if(!DEMO_SEED)return[];let o=SEEDC.get(tr.id);if(o)return o;o
 const incoming=tr=>S.bookings.filter(b=>b.xfer&&b.xfer.status==='Offered'&&b.xfer.toTrip===tr.id); // seats reserved on this bus for passengers offered a transfer
 const allB=tr=>[...seeds(tr),...S.bookings.filter(b=>b.tripId===tr.id&&b.status!=='Cancelled'),...incoming(tr).map(b=>({...b,tripId:tr.id,seat:b.xfer.toSeat,status:'Offered'}))];
 const hk=(tr,s)=>tr.id+'#'+s;
-const departed=(tr,f)=>new Date(tr.date+'T'+tr.time+':00').getTime()+Math.round(STOPS[f].km*MPK)*60000<=Date.now(); // bus already passed boarding stop f
+const departed=(tr,f)=>new Date(tr.date+'T'+tr.time+':00').getTime()+Math.round(SPo(tr)[f].km*MPK)*60000<=Date.now(); // bus already passed boarding stop f
 /* IMPROVE:
  * Hold expiry runs in the browser here. Move it to the server: expire holds in the database and re-check at confirmation.
  * Two people on different devices cannot see each other's holds today; a database constraint is needed to prevent double booking.
@@ -464,8 +457,8 @@ function sweep(){const n=Date.now();for(const k in S.holds)if(S.holds[k].exp<=n)
 /* IMPROVE:
  * Move to the server. Round per the operator's published rules and return a fare breakdown with the booking.
  */
-function fare(op,f,t,cat){
- const km=STOPS[t].km-STOPS[f].km,r4=x=>Math.round(+(x*4).toFixed(6))/4,R=FARE_RULES[op.type.trim()],disc=(CATS[cat]||0)>0;
+function fare(op,f,t,cat,tr){
+ const km=SPo(tr)[t].km-SPo(tr)[f].km,r4=x=>Math.round(+(x*4).toFixed(6))/4,R=FARE_RULES[op.type.trim()],disc=(CATS[cat]||0)>0;
  if(R){const d=Math.max(FARE.minKm,km),b=r4(d*R.reg),tot=disc?r4(d*R.dis):b;return{km,base:b,disc:Math.round((b-tot)*100)/100,total:tot,official:true}}
  const b=r4(Math.max(FARE.min,(FARE.base+km*FARE.perKm)*(OPMULT[op.id]||1))),d=Math.round(b*(CATS[cat]||0)*100)/100;return{km,base:b,disc:d,total:Math.round((b-d)*100)/100,official:false}}
 /* A seat is reusable for [f,t) only when no booking overlaps AND every earlier passenger on that seat has confirmed exit (status Completed, set by the operator).
@@ -507,9 +500,9 @@ function sfMsg(){return''}
 function rFind(){app.innerHTML=`<section class="hero"><div class="wrap"><h1>Reserve your seat by stop, not just by bus.</h1>
 <p>Search Laguna bus trips, pick a seat for your exact segment, pay with a transit card and ride with a digital ticket.</p>
 <div class="line" aria-hidden="true"><i class="stop"><span>Sta. Cruz</span></i><div class="seg sA"></div><i class="stop"><span>Calamba</span></i><div class="seg sB"></div><i class="stop"><span>Muntinlupa</span></i><div class="seg sB"></div><i class="stop"><span>Cubao</span></i></div></div></section>
-<div class="wrap"><form class="panel" id="sf" aria-label="Journey search"><div class="fgrid">
-${sgField('f','From',UI.f==null?'':STOPS[UI.f].n,'Type your boarding stop, e.g. Sta. Cruz')}
-${sgField('t','To',UI.t==null?'':STOPS[UI.t].n,'Type your destination, e.g. Cubao')}
+<div class="wrap"><form class="panel" id="sf" aria-label="Journey search"><div class="fgrid"><label>Direction<select id="sf-r"><option value="0" ${UI.rev?'':'selected'}>From Sta. Cruz to Cubao &amp; Metro Manila</option><option value="1" ${UI.rev?'selected':''}>From Cubao &amp; Metro Manila to Sta. Cruz</option></select></label>
+${sgField('f','From',UI.f==null?'':FS()[UI.f].n,UI.rev?'Type your boarding stop, e.g. Cubao':'Type your boarding stop, e.g. Sta. Cruz')}
+${sgField('t','To',UI.t==null?'':FS()[UI.t].n,UI.rev?'Type your destination, e.g. Sta. Cruz':'Type your destination, e.g. Cubao')}
 <label>Date<input type="date" id="sf-d" value="${UI.date}" min="${today()}" required></label>
 <label>Bus company<select id="sf-o"><option value="all">All companies</option>${OPS.map(o=>`<option ${UI.op===o.id?'selected':''}>${o.id}</option>`).join('')}</select></label>
 <label>Departure time<select id="sf-s">${SLOTS.map(x=>`<option value="${x[0]}" ${UI.slot===x[0]?'selected':''}>${x[1]}</option>`).join('')}</select></label>
@@ -526,12 +519,12 @@ ${sgField('t','To',UI.t==null?'':STOPS[UI.t].n,'Type your destination, e.g. Cuba
  res()}
 function res(){const box=$('#results');if(!box)return;sweep();
  if(UI.f==null||UI.t==null||UI.t<=UI.f){box.innerHTML=`<div class="empty"><b>Where are you going?</b><br>Type your boarding stop (From) and your destination (To), then press Search buses.</div>`;return}
- const all=tripsFor(UI.date).filter(x=>UI.op==='all'||x.op.id===UI.op).filter(x=>inSlot(x,UI.f,UI.slot)).sort((a,b)=>stopTime(a,UI.f)<stopTime(b,UI.f)?-1:1),
-  tr=all.filter(x=>!departed(x,UI.f)),left=all.length-tr.length,stn=esc(STOPS[UI.f].n);
+ const all=tripsFor(UI.date).filter(x=>!!x.rev===!!UI.rev).filter(x=>UI.op==='all'||x.op.id===UI.op).filter(x=>inSlot(x,UI.f,UI.slot)).sort((a,b)=>stopTime(a,UI.f)<stopTime(b,UI.f)?-1:1),
+  tr=all.filter(x=>!departed(x,UI.f)),left=all.length-tr.length,stn=esc(FS()[UI.f].n);
  if(!tr.length){box.innerHTML=left?`<div class="empty"><b>All buses on this date have already left ${stn}.</b><br>Choose tomorrow or a later date.</div>`:`<div class="empty"><b>No matching trips.</b><br>Try another date, another departure time, or choose All companies.</div>`;return}
- box.innerHTML=(left?`<p class="mut" style="margin:0;font-size:13px">${left} earlier bus${left>1?'es have':' has'} already left ${stn} and ${left>1?'are':'is'} hidden.</p>`:'')+tr.map(x=>{const a=avail(x,UI.f,UI.t),fr=fare(x.op,UI.f,UI.t,'Regular');const bs=isOut(x)?['Not available','r']:a===0?['Full','r']:a<=6?['Almost full','o']:['Open','g'];
+ box.innerHTML=(left?`<p class="mut" style="margin:0;font-size:13px">${left} earlier bus${left>1?'es have':' has'} already left ${stn} and ${left>1?'are':'is'} hidden.</p>`:'')+tr.map(x=>{const a=avail(x,UI.f,UI.t),fr=fare(x.op,UI.f,UI.t,'Regular',x);const bs=isOut(x)?['Not available','r']:a===0?['Full','r']:a<=6?['Almost full','o']:['Open','g'];
  return`<article class="card res"><div><div class="meta"><b style="color:var(--ink)">${esc(x.op.id)}</b><span>Bus ${x.bus}</span><span class="badge ${bs[1]}">${bs[0]}</span></div>
- <div class="big">${stopTime(x,UI.f)} ${STOPS[UI.f].n} → ${stopTime(x,UI.t)} ${STOPS[UI.t].n}</div>
+ <div class="big">${stopTime(x,UI.f)} ${FS()[UI.f].n} → ${stopTime(x,UI.t)} ${FS()[UI.t].n}</div>
  <div class="meta" style="margin:2px 0 4px"><b style="color:var(--teal)">${etaSpan(x,UI.f,0,'⏱ ')}</b></div>
  <div class="meta"><span>${x.date}</span><span>${x.op.type}</span><span>${fr.official?'Fare':'Sample fare'} from ${peso(fr.total)}</span><span>${a+' of '+(seatsOf(x)-1)+' seats free for this segment'}</span></div><div class="meter" aria-hidden="true"><i style="width:${a/(seatsOf(x)-1)*100}%"></i></div></div>
  <button class="btn" data-act="open" data-id="${esc(x.id)}" ${a?'':'disabled'}>Select seat</button></article>`}).join('')}
@@ -543,10 +536,10 @@ function busGrid(cell,lay){lay=lay||LAYOUTS.L50;let h=`<div class="bus"><div cla
  h+='<div class="srow" style="border-top:2px dashed var(--line);padding-top:8px">';for(let c=0;c<lay.back;c++)h+=cell(n++,c===0||c===lay.back-1?'window':'middle');return h+'</div></div>'}
 function seatMap(tr){const{f,t}=UI;const btn=(n,pos)=>{if(n===DRIVER)return driverSeat;const st=seatState(tr,n,f,t);return`<button class="seat ${st}" data-act="seat" data-s="${n}" aria-label="Seat ${n}, ${pos}, ${LBL[st]}" ${['occupied','blocked','held'].includes(st)?'disabled':''} ${st==='mine'?'aria-pressed="true"':''}>${n}</button>`};
  return busGrid(btn,layoutOf(tr))+`<p class="mut" style="font-size:12px;text-align:center;margin:8px 0 0">Seat plan: ${layoutOf(tr).name}</p><div class="leg"><span><i style="background:var(--tealbg);border:1px solid var(--teal)"></i>Available</span><span><i style="background:var(--blue)"></i>Selected</span><span><i style="background:var(--redbg);border:1px solid var(--red)"></i>Occupied</span><span><i style="background:#fff6d1;border:1px solid var(--yel)"></i>Held / awaiting exit</span><span><i style="background:var(--navy)"></i>Driver seat (1)</span></div>`}
-function rSeat(){const tr=tripById(UI.trip),fr=fare(tr.op,UI.f,UI.t,UI.cat),c=S.cards[UI.card],h=S.holds[hk(tr,UI.seat)];UI.mode='seat';
- openDlg(`<div class="dh"><h3 style="margin:0">${esc(tr.op.id)} · Bus ${tr.bus} · ${STOPS[UI.f].n} → ${STOPS[UI.t].n}</h3><button class="btn g sm" data-act="close">Close</button></div>
+function rSeat(){const tr=tripById(UI.trip),fr=fare(tr.op,UI.f,UI.t,UI.cat,tr),c=S.cards[UI.card],h=S.holds[hk(tr,UI.seat)];UI.mode='seat';
+ openDlg(`<div class="dh"><h3 style="margin:0">${esc(tr.op.id)} · Bus ${tr.bus} · ${FS()[UI.f].n} → ${FS()[UI.t].n}</h3><button class="btn g sm" data-act="close">Close</button></div>
  <div class="db"><div class="split"><div>${seatMap(tr)}<p class="mut" style="font-size:12.5px;text-align:center;margin-top:10px">Tap a yellow seat to be notified when its previous passenger exits.</p></div>
- <div><h3>Your booking</h3><dl><dt>Passenger</dt><dd>${esc(who())}</dd><dt>Segment</dt><dd>${STOPS[UI.f].n} → ${STOPS[UI.t].n} (${fr.km} km)</dd><dt>Bus reaches your stop</dt><dd>${stopTime(tr,UI.f)}${etaSpan(tr,UI.f,1,' · ')}</dd><dt>Seat</dt><dd>${UI.seat||'Not selected'}</dd></dl>
+ <div><h3>Your booking</h3><dl><dt>Passenger</dt><dd>${esc(who())}</dd><dt>Segment</dt><dd>${FS()[UI.f].n} → ${FS()[UI.t].n} (${fr.km} km)</dd><dt>Bus reaches your stop</dt><dd>${stopTime(tr,UI.f)}${etaSpan(tr,UI.f,1,' · ')}</dd><dt>Seat</dt><dd>${UI.seat||'Not selected'}</dd></dl>
  <label>Passenger type<select data-chg="cat">${Object.keys(CATS).map(k=>`<option ${UI.cat===k?'selected':''}>${k}</option>`).join('')}</select></label>
  <dl><dt>Base fare  </dt><dd>${peso(fr.base)}</dd><dt>Discount</dt><dd>−${peso(fr.disc)}</dd><dt>Total</dt><dd style="font-size:1.2rem">${peso(fr.total)}</dd></dl>
  ${UI.cat!=='Regular'?'<p class="mut" style="font-size:12.5px">A valid ID for this passenger type must be shown when boarding.</p>':''}
@@ -564,12 +557,12 @@ function book(){if(S.pax==='OP')return toast('Switch to a passenger account to b
  if(departed(tr,f))return toast('This bus has already left your boarding stop.');
  if(isOut(tr))return toast('This bus is not taking bookings right now.');
  if(seatState(tr,seat,f,t)!=='mine')return toast('Your seat hold expired. Pick a seat again.'),rSeat();
- const fr=fare(tr.op,f,t,cat),id='BK'+nid();
+ const fr=fare(tr.op,f,t,cat,tr),id='BK'+nid();
  S.bookings.push({id,tripId:tr.id,seat,from:f,to:t,pax:px,name:pname,cat,status:'Booked',pay:'Unpaid',base:fr.base,disc:fr.disc,fare:fr.total,ts:stamp()});
  delete S.holds[hk(tr,seat)];drvAlert(S.bookings[S.bookings.length-1],tr);
- const eta=etaLabel(etaTarget(tr,f),STOPS[f].n);
- note(px,`Seat ${seat} booked, ${STOPS[f].n} → ${STOPS[t].n}. ${eta?eta+' ':''}(${stopTime(tr,f)}). Pay in My Bookings to check in.`);
- opNote(`🪑 ${pname} booked Seat ${seat} · ${STOPS[f].n} → ${STOPS[t].n} (${tr.op.id} ${tr.time})`,'booked');
+ const eta=etaLabel(etaTarget(tr,f),SPo(tr)[f].n);
+ note(px,`Seat ${seat} booked, ${SPo(tr)[f].n} → ${SPo(tr)[t].n}. ${eta?eta+' ':''}(${stopTime(tr,f)}). Pay in My Bookings to check in.`);
+ opNote(`🪑 ${pname} booked Seat ${seat} · ${SPo(tr)[f].n} → ${SPo(tr)[t].n} (${tr.op.id} ${tr.time})`,'booked');
  S.log.unshift({ts:stamp(),who:pname,action:'Seat booked',rec:id});UI.seat=null;dlg.close();S.view='trips';render();scrollTo(0,0);toast('Seat booked. '+(eta?eta+'. ':'')+'Pay to check in.')}
 /* Paying = checking in. Simulated with the prototype transit card. */
 function payBooking(id){const b=S.bookings.find(x=>x.id===id&&x.pax===S.pax);if(!b)return;if(b.status!=='Booked')return toast('This booking is already paid.');if(b.xfer)return toast('Respond to the transfer offer first.');
@@ -577,10 +570,10 @@ function payBooking(id){const b=S.bookings.find(x=>x.id===id&&x.pax===S.pax);if(
  if(!c)return toast('Link a transit card first in Transit Card.');if(c.status!=='Active')return toast('This card is blocked. Use another card.');
  if(c.bal<b.fare)return toast('Balance is too low. Top up in Transit Card.');
  c.bal=Math.round((c.bal-b.fare)*100)/100;
- const tx={ref:'TX-'+(100000+nid()),idem:b.id,card:num,amt:b.fare,status:'Successful',type:'fare',ts:stamp(),desc:`${tr.op.id} ${STOPS[b.from].n} → ${STOPS[b.to].n}`,bk:b.id};
+ const tx={ref:'TX-'+(100000+nid()),idem:b.id,card:num,amt:b.fare,status:'Successful',type:'fare',ts:stamp(),desc:`${tr.op.id} ${SPb(b)[b.from].n} → ${SPb(b)[b.to].n}`,bk:b.id};
  S.txs.unshift(tx);Object.assign(b,{status:'Checked in',pay:'Paid',txRef:tx.ref,rc:'RC-'+(200000+nid()),card:num,paidAt:stamp()});
  note(b.pax,`Paid ${peso(b.fare)} (${tx.ref}). You are checked in. Seat ${b.seat}.`);if(c.bal<50)note(b.pax,'Low card balance. Please top up.');
- opNote(`💳 ${b.name} paid ${peso(b.fare)} and checked in · Seat ${b.seat} · ${STOPS[b.from].n} → ${STOPS[b.to].n} (${tr.op.id} ${tr.time})`,'paid');
+ opNote(`💳 ${b.name} paid ${peso(b.fare)} and checked in · Seat ${b.seat} · ${SPb(b)[b.from].n} → ${SPb(b)[b.to].n} (${tr.op.id} ${tr.time})`,'paid');
  S.log.unshift({ts:stamp(),who:b.name,action:'Paid and checked in',rec:b.id});b.method='Card';b.tend=b.fare;b.chg=0;fareEntry(b,{method:'Card',tendered:b.fare});render();showReceipt(b.id)}
 function opBell(){const ns=S.notes.filter(n=>n.pax==='OP');ns.forEach(n=>n.read=true);save();renderNav();UI.mode='bell';
  openDlg(`<div class="dh"><h3 style="margin:0">Notifications</h3><button class="btn g sm" data-act="close">Close</button></div><div class="db"><div class="list">${ns.length?ns.slice(0,40).map(n=>`<div class="card" style="padding:10px 14px"><b>${esc(n.text)}</b><div class="mut" style="font-size:12px">${n.ts}</div></div>`).join(''):'<div class="empty">No updates yet. You will be told when a passenger books, pays and checks in, or is getting off.</div>'}</div></div>`)}
@@ -614,10 +607,10 @@ function registerCard(v){v=norm(v);if(v.length<8)return toast('Enter at least 8 
  if(!S.cards[v])S.cards[v]={owner:S.pax,bal:0,status:'Active'};PAX[S.pax].card=v;S.link[S.pax]=v;logIt('Card linked',mask(v));render();toast('Card linked. Top up to use it.')}
 function nfcRead(sn){sn=norm(sn);if(!S.cards[sn]){if(!confirm('New card '+mask(sn)+'. Link it to your account?'))return;registerCard(sn)}
  if(S.cards[sn].owner!==S.pax)return toast('That card belongs to another passenger.');UI.card=sn;rSeat()}
-const rcKm=b=>Math.round((STOPS[b.to].km-STOPS[b.from].km)*10)/10;
+const rcKm=b=>Math.round((SPb(b)[b.to].km-SPb(b)[b.from].km)*10)/10;
 /* Draws the receipt on a canvas and downloads it as a PNG photo (no server needed). */
 function dlReceipt(id){const b=S.bookings.find(x=>x.id===id);if(!b||!b.rc)return toast('Pay first to get a receipt.');const tr=tripById(b.tripId),W=760,P=44,
- rows=[['Receipt no.',b.rc],['Transaction',b.txRef],['Booking ref',b.id],['Passenger',b.name],['Operator',`${tr.op.id} (${tr.op.type.trim()})`],['Bus no.',tr.bus],['Trip',`${tr.date} · departs ${tr.time}`],['Boarding',STOPS[b.from].n],['Destination',STOPS[b.to].n],['Distance',rcKm(b)+' km'],['Seat',String(b.seat)],['Passenger type',b.cat],['Base fare',peso(b.base)],['Discount',`−${peso(b.disc)}`],['Payment',b.method||'Card'],['Paid',b.paidAt||'']],
+ rows=[['Receipt no.',b.rc],['Transaction',b.txRef],['Booking ref',b.id],['Passenger',b.name],['Operator',`${tr.op.id} (${tr.op.type.trim()})`],['Bus no.',tr.bus],['Trip',`${tr.date} · departs ${tr.time}`],['Boarding',SPb(b)[b.from].n],['Destination',SPb(b)[b.to].n],['Distance',rcKm(b)+' km'],['Seat',String(b.seat)],['Passenger type',b.cat],['Base fare',peso(b.base)],['Discount',`−${peso(b.disc)}`],['Payment',b.method||'Card'],['Paid',b.paidAt||'']],
  H=250+rows.length*40+345,c=document.createElement('canvas');c.width=W*2;c.height=H*2;const x=c.getContext('2d');x.scale(2,2);
  const F='system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif';x.fillStyle='#fff';x.fillRect(0,0,W,H);
  const g=x.createLinearGradient(0,0,W,0);g.addColorStop(0,'#0b1f4a');g.addColorStop(1,'#16336f');x.fillStyle=g;x.fillRect(0,0,W,150);
@@ -633,7 +626,7 @@ function dlReceipt(id){const b=S.bookings.find(x=>x.id===id);if(!b||!b.rc)return
  if(q)draw(q);done()}
 function showReceipt(id){const b=S.bookings.find(x=>x.id===id),tr=tripById(b.tripId);UI.mode='rc';
  openDlg(`<div class="dh"><h3 style="margin:0">Digital receipt & ticket</h3><button class="btn g sm" data-act="close">Close</button></div><div class="db"><div class="split"><div style="text-align:center"><div id="qrbox" style="display:inline-block;background:#fff;padding:8px;border-radius:8px"></div><p class="mut" style="font-size:12px">Show this QR to staff when boarding.<br><code style="word-break:break-all">${tcode(b)}</code></p><span class="badge g">${b.status}</span></div>
- <div><dl><dt>Receipt no.</dt><dd>${b.rc}</dd><dt>Transaction</dt><dd>${b.txRef}</dd><dt>Booking ref</dt><dd>${b.id}</dd><dt>Passenger</dt><dd>${esc(b.name)}</dd>${b.card?`<dt>Card</dt><dd>${mask(b.card)}</dd>`:''}<dt>Operator</dt><dd>${esc(tr.op.id)} (${esc(tr.op.type.trim())})</dd><dt>Bus no.</dt><dd>${tr.bus}</dd><dt>Trip</dt><dd>${tr.date} · departs ${tr.time}</dd><dt>Boarding → destination</dt><dd>${STOPS[b.from].n} → ${STOPS[b.to].n}</dd><dt>Distance</dt><dd>${rcKm(b)} km</dd><dt>Seat</dt><dd>${b.seat}</dd><dt>Base fare</dt><dd>${peso(b.base)}</dd><dt>Discount (${b.cat})</dt><dd>−${peso(b.disc)}</dd><dt>Amount paid</dt><dd>${peso(b.fare)}</dd>${payRows(b)}</dl>${trail(b)}
+ <div><dl><dt>Receipt no.</dt><dd>${b.rc}</dd><dt>Transaction</dt><dd>${b.txRef}</dd><dt>Booking ref</dt><dd>${b.id}</dd><dt>Passenger</dt><dd>${esc(b.name)}</dd>${b.card?`<dt>Card</dt><dd>${mask(b.card)}</dd>`:''}<dt>Operator</dt><dd>${esc(tr.op.id)} (${esc(tr.op.type.trim())})</dd><dt>Bus no.</dt><dd>${tr.bus}</dd><dt>Trip</dt><dd>${tr.date} · departs ${tr.time}</dd><dt>Boarding → destination</dt><dd>${SPb(b)[b.from].n} → ${SPb(b)[b.to].n}</dd><dt>Distance</dt><dd>${rcKm(b)} km</dd><dt>Seat</dt><dd>${b.seat}</dd><dt>Base fare</dt><dd>${peso(b.base)}</dd><dt>Discount (${b.cat})</dt><dd>−${peso(b.disc)}</dd><dt>Amount paid</dt><dd>${peso(b.fare)}</dd>${payRows(b)}</dl>${trail(b)}
  <div class="noprint" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" onclick="window.print()">Print / save as PDF</button><button class="btn t sm" data-act="dlrc" data-id="${b.id}">⬇ Download receipt (image)</button></div></div></div></div>`);drawQR(tcode(b))}
 /* ========= MY BOOKINGS ========= */
 const STAGES=['Booked','Checked in','Completed'];
@@ -644,11 +637,11 @@ function stageIdx(s){return{'Booked':0,'Checked in':1,'Completed':2}[s]}
  */
 function rTrips(){const mine=S.bookings.filter(b=>b.pax===S.pax).reverse(),ns=S.notes.filter(n=>n.pax===S.pax),w=S.watch.filter(x=>x.pax===S.pax);
  app.innerHTML=`<div class="wrap sec"><h2>My bookings</h2><p class="mut">Booked: you reserved a seat. Checked in: you paid. Completed: the operator confirmed you got off.</p><div class="list">${mine.length?mine.map(b=>{const tr=tripById(b.tripId),i=stageIdx(b.status);return`<article class="card"><div class="meta"><b style="color:var(--ink)">${esc(tr.op.id)} · ${tr.bus}</b><span>${tr.date} ${tr.time}</span><span>Seat ${b.seat}</span><span>${peso(b.fare)}</span><span class="badge ${b.status==='Completed'?'g':b.status==='Checked in'?'b':'o'}">${b.status}</span></div>
- <h3 style="margin:8px 0 0">${STOPS[b.from].n} → ${STOPS[b.to].n}</h3>
- ${b.status!=='Completed'?`<p style="margin:6px 0 0"><b style="color:var(--teal)">${etaSpan(tr,b.from,0,'⏱ ')}</b> <span class="mut">${etaTarget(tr,b.from)-Date.now()>ETA_MAX?'':'· due '+stopTime(tr,b.from)}</span></p>`:''}
+ <h3 style="margin:8px 0 0">${SPb(b)[b.from].n} → ${SPb(b)[b.to].n}</h3>
+ ${b.status!=='Completed'?`<p style="margin:6px 0 0"><b style="color:var(--teal)">${etaSpan(tr,b.from,0,'⏱ ')}</b> <span class="mut">${etaTarget(tr,b.from)-Date.now()>ETA_MAX?'':'· due '+stopTime(tr,b.from)}</span></p>`:''}${b.status==='Checked in'?`<p style="margin:4px 0 0"><b style="color:var(--org)">${etaSpan(tr,b.to,0,'🚪 ')}</b></p>`:''}
  <div class="steps">${STAGES.map((s,k)=>`<span class="${k<=i?'on':''}">${s}</span>`).join('')}</div>${payLine(b)}${b.movedFrom?`<p class="mut" style="margin:8px 0 0">Transferred from bus ${esc(tripById(b.movedFrom.trip).bus)}, seat ${b.movedFrom.seat}. Your payment carried over.</p>`:''}${b.xfer?offerBox(b):''}<div style="margin:8px 0"><button class="btn g sm" data-act="rptbus" data-id="${b.id}">Report a problem with this bus</button></div>
  <div style="display:flex;gap:8px;flex-wrap:wrap">${b.status==='Booked'&&!b.xfer?`<button class="btn t sm" data-act="paybk" data-id="${b.id}">Pay ${peso(b.fare)} & check in</button><button class="btn g sm" data-act="cancel" data-id="${b.id}">Cancel booking</button>`:''}${b.status==='Checked in'?`<button class="btn sm" data-act="rcpt" data-id="${b.id}">Ticket & receipt</button>${b.exit||b.xfer?(b.exit?'<span class="badge o">Operator told: getting off</span>':''):`<button class="btn g sm" data-act="gettingoff" data-id="${b.id}">I'm getting off</button>`}`:''}${b.status==='Completed'&&b.pay==='Paid'?`<button class="btn g sm" data-act="rcpt" data-id="${b.id}">Receipt</button>`:''}</div></article>`}).join(''):`<div class="empty"><b>No bookings yet.</b><br>Find a bus and book a seat to see it here.</div>`}</div>
- ${w.length?`<h3 style="margin-top:24px">Waiting for a seat</h3>${w.map(x=>`<p class="mut">Seat ${x.seat} on ${esc(x.tripId.split('|')[1])} ${x.tripId.split('|')[2]}, from ${STOPS[x.from].n}. We will notify you once the previous passenger's exit is confirmed.</p>`).join('')}`:''}
+ ${w.length?`<h3 style="margin-top:24px">Waiting for a seat</h3>${w.map(x=>`<p class="mut">Seat ${x.seat} on ${esc(x.tripId.split('|')[1])} ${x.tripId.split('|')[2]}, from ${SPb(x)[x.from].n}. We will notify you once the previous passenger's exit is confirmed.</p>`).join('')}`:''}
  <h3 style="margin-top:24px">Notifications</h3><div class="list">${ns.length?ns.slice(0,12).map(n=>`<div class="card" style="padding:10px 14px"><b>${esc(n.text)}</b><div class="mut" style="font-size:12px">${n.ts} · in-app (email/SMS/push need extra infrastructure)</div></div>`).join(''):'<div class="empty">Nothing yet.</div>'}</div></div>`;
  S.notes.forEach(n=>{if(n.pax===S.pax)n.read=true});save();renderNav()}
 /* ========= TRANSIT CARD ========= */
@@ -665,30 +658,51 @@ function rCard(){const num=PAX[S.pax].card,c=S.cards[num],tx=S.txs.filter(x=>x.c
 /* IMPROVE:
  * Add a station detail view with verified coordinates, a per-operator stop sequence, and accessibility info. Keep OSM attribution.
  */
-function rRoutes(){const q=UI.q.toLowerCase(),st=STOPS.filter(s=>(s.n+s.m).toLowerCase().includes(q));
- app.innerHTML=`<div class="wrap sec"><h2>Bus companies</h2><div class="grid">${OPS.map(o=>`<article class="card"><span class="badge o">Sample data</span><h3 style="margin-top:8px">${esc(o.id)}</h3><p class="mut" style="margin-bottom:6px">Route: ${STOPS.map(s=>s.n).join(' → ')}<br>${o.type} · about ${Math.round(STOPS[STOPS.length-1].km*MPK)} min · ${SEATS} seats<br>Departures: ${o.times.join(', ')}</p><p class="note">${o.ann}</p>
- <div style="display:flex;gap:8px;margin-top:12px"><button class="btn g sm" data-act="company" data-o="${esc(o.id)}">View buses</button><button class="btn sm" data-act="company" data-o="${esc(o.id)}">Book now</button></div></article>`).join('')}</div>
- <h2 style="margin-top:34px">Route map: ${STOPS.length} towns and cities passed</h2><div class="card"><ol style="list-style:none;margin:0;padding:0">${STOPS.map((s,i)=>`<li style="display:flex;gap:14px"><div style="display:flex;flex-direction:column;align-items:center"><i class="stop" style="border-color:var(--card);box-shadow:0 0 0 2px var(--navy);margin-top:4px"></i>${i<STOPS.length-1?'<div class="sC" style="width:3px;flex:1;min-height:24px"></div>':''}</div><div style="padding-bottom:12px"><b>${esc(s.n)}</b> <span class="mut">· ${esc(s.m)} · ${s.km} km</span></div></li>`).join('')}</ol></div>\n <h2 style="margin-top:34px">Station directory</h2><label style="max-width:360px">Search stations<input id="q" value="${esc(UI.q)}" placeholder="Name or city" data-inp="q"></label>
- <div class="grid" style="margin-top:14px">${st.length?st.map(s=>`<div class="card"><h3>${s.n} terminal</h3><p class="mut">${s.m}<br>Address, hours and landmarks: not verified (placeholder).<br>Routes: all four companies  .</p></div>`).join(''):'<div class="empty">No station matches. Try a different name.</div>'}</div></div>`}
+function rRoutes(){const R=UI.rrev?1:0,SP=R?RSTOPS:STOPS,q=UI.q.toLowerCase(),st=STOPS.filter(s=>(s.n+s.m).toLowerCase().includes(q)),mins=Math.round(SP[SP.length-1].km*MPK),hm=mins>=60?Math.floor(mins/60)+' hr '+(mins%60)+' min':mins+' min',
+ seg=(r,l)=>`<button type="button" class="btn sm ${R===r?'':'g'}" data-rr="${r}" aria-pressed="${R===r}">${l}</button>`;
+ app.innerHTML=`<div class="wrap sec"><h2>Routes &amp; Stations</h2><p class="mut">Sample schedules. Confirm times with the bus company.</p>
+ <div style="display:flex;gap:8px;flex-wrap:wrap;margin:14px 0">${seg(0,'Sta. Cruz → Cubao')}${seg(1,'Cubao → Sta. Cruz')}</div>
+ <div class="card"><h3 style="margin-bottom:4px">${esc(SP[0].n)} → ${esc(SP[SP.length-1].n)}</h3><p class="mut" style="margin:0">${SP.length} stops · ${SP[SP.length-1].km} km · about ${hm} (estimated)</p>
+ <details style="margin-top:10px"><summary style="cursor:pointer;font-weight:600">Show all stops</summary><ol style="margin:10px 0 0;padding-left:22px">${SP.map(s=>`<li>${esc(s.n)} <span class="mut">· ${s.km} km</span></li>`).join('')}</ol></details></div>
+ <h3 style="margin:26px 0 10px">Bus companies</h3><div class="grid">${OPS.map(o=>`<article class="card"><h3 style="margin-bottom:2px">${esc(o.id)}</h3><p class="mut" style="margin:0 0 10px">${o.type.trim()} · ${SEATS} seats<br>${(R?o.rtimes||[]:o.times).join(' · ')}</p><button class="btn g sm" data-act="company" data-o="${esc(o.id)}">View buses</button></article>`).join('')}</div>
+ <h3 style="margin:26px 0 10px">Stations</h3><label style="max-width:360px">Search stations<input id="q" value="${esc(UI.q)}" placeholder="Name or city" data-inp="q"></label>
+ <div class="card" style="margin-top:12px;padding:6px 16px">${st.length?st.map(s=>`<div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)"><b>${esc(s.n)}</b><span class="mut">${esc(s.m)}</span></div>`).join(''):'<div class="empty">No station matches. Try a different name.</div>'}</div></div>`}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-rr]');if(b){UI.rrev=+b.dataset.rr;rRoutes()}});
+/* ========= "GET READY TO GET OFF" ALERT =========
+   When a paid passenger's bus is within OUT_MIN minutes of their destination stop (scheduled estimate), they get a notification, a banner, a vibration and,
+   if the browser already allows it, a system notification. Fires once per booking. The driver's "We've arrived" button still sends the final alert.
+   IMPROVE: on a real system send this from the server (push/SMS) using live GPS, so it also works when the page is closed. */
+const OUT_MIN=10;
+function outBanner(items){let el=$('#outbar');if(!el){el=document.createElement('div');el.id='outbar';el.setAttribute('role','alert');el.style.cssText='position:fixed;left:50%;transform:translateX(-50%);top:calc(70px + env(safe-area-inset-top,0px));z-index:70;width:min(460px,calc(100vw - 24px));background:var(--org);color:#fff;border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.35);padding:14px 16px';document.body.appendChild(el)}
+ el.innerHTML=items.map(x=>`<div style="margin-bottom:10px"><b style="font-size:1.05rem">⏰ Get ready to get off</b><br>${esc(x.text)}</div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px"><button class="btn sm" style="background:#fff;color:var(--ink)" data-act="gettingoff" data-id="${esc(x.id)}">I’m getting off</button></div>`).join('')+'<button class="btn sm g" style="color:#fff;border-color:#fff" data-outok="1">OK</button>';el.hidden=false}
+function chkOut(){const now=Date.now(),hit=[];
+ S.bookings.forEach(b=>{if(b.pax!==S.pax||b.status!=='Checked in'||b.warned||b.exit)return;const tr=tripById(b.tripId);if(!tr)return;const ms=etaTarget(tr,b.to)-now;
+  if(ms>OUT_MIN*60000)return;b.warned=1;if(ms<-5*60000)return;
+  const nm=SPb(b)[b.to].n,txt=`Your stop ${nm} is in about ${Math.max(1,Math.ceil(ms/60000))} min. Please collect your things (Seat ${b.seat}).`;
+  note(b.pax,'⏰ '+txt);hit.push({id:b.id,text:txt});
+  try{if('Notification' in window&&Notification.permission==='granted')new Notification('Get ready to get off',{body:txt})}catch(e){}});
+ if(hit.length){save();navigator.vibrate&&navigator.vibrate([300,120,300,120,300]);outBanner(hit);renderNav()}}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('#outbar button');if(b){const el=$('#outbar');if(el)setTimeout(()=>{el.hidden=true},0)}});
+setInterval(chkOut,15000);setTimeout(chkOut,1500);
 /* ========= BUS TRACKING (Leaflet + OpenStreetMap). Live = staff phone GPS (same browser until a backend exists); otherwise demo playback ========= */
 let PLAY,GPSW,MAP,MARK;
 function dropMap(){try{if(MAP)MAP.remove()}catch(e){}MAP=MARK=null}
-function posAt(p){const T=STOPS[STOPS.length-1].km,d=p*T;let i=0;while(i<STOPS.length-2&&d>=STOPS[i+1].km)i++;const a=STOPS[i],b=STOPS[i+1],t=Math.min(1,(d-a.km)/(b.km-a.km));return{lat:a.lat+(b.lat-a.lat)*t,lng:a.lng+(b.lng-a.lng)*t,i,next:i+1,d}}
+function posAt(p,SP=STOPS){const T=SP[SP.length-1].km,d=p*T;let i=0;while(i<SP.length-2&&d>=SP[i+1].km)i++;const a=SP[i],b=SP[i+1],t=Math.min(1,(d-a.km)/(b.km-a.km));return{lat:a.lat+(b.lat-a.lat)*t,lng:a.lng+(b.lng-a.lng)*t,i,next:i+1,d}}
 /* IMPROVE:
  * Tracking is 'Demo playback' or localStorage GPS. Show a moving bus only when a real GPS feed exists (last location, update time, vehicle id).
  * Otherwise label the map 'Route map / scheduled route' and remove the play slider.
  */
 function moveBus(){const el=$('#trkinfo');if(!el)return;const g=(S.gps||{})[UI.trk],live=g&&Date.now()-g.ts<120000;let ll;
  if(live){ll=[g.lat,g.lng];el.textContent='Live GPS from staff device · updated '+Math.round((Date.now()-g.ts)/1000)+'s ago'}
- else{const q=posAt(UI.prog),tr=tripById(UI.trk);ll=[q.lat,q.lng];el.textContent=`Demo playback · ${Math.round(q.d)} km from ${STOPS[0].n} · next stop ${STOPS[q.next].n}, scheduled ${stopTime(tr,q.next)}`}
+ else{const tr=tripById(UI.trk),SP=SPo(tr),q=posAt(UI.prog,SP);ll=[q.lat,q.lng];el.textContent=`Demo playback · ${Math.round(q.d)} km from ${SP[0].n} · next stop ${SP[q.next].n}, scheduled ${stopTime(tr,q.next)}`}
  if(MARK)MARK.setLatLng(ll)}
 function rTrack(){const trs=tripsFor(today());if(!trs.find(x=>x.id===UI.trk))UI.trk=(S.bookings.find(b=>trs.find(x=>x.id===b.tripId))||{}).tripId||trs[0].id;
  app.innerHTML=`<div class="wrap sec"><h2>Track the bus</h2><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:12px"><label>Trip today<select data-chg="trk">${trs.map(x=>`<option value="${esc(x.id)}" ${x.id===UI.trk?'selected':''}>${x.op.id} ${x.bus} · departs ${x.time}</option>`).join('')}</select></label><label>Demo playback position<input type="range" id="prog" min="0" max="1000" value="${UI.prog*1000}"></label></div>
  <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px"><button class="btn sm" id="playb" data-act="play">${PLAY?'Pause':'Play demo'}</button><span id="trkinfo" class="badge b" style="white-space:normal"></span></div>
  <div id="map" role="region" aria-label="Bus route map"></div><p class="mut" style="font-size:13px;margin-top:10px">Live position appears when staff share GPS on the Operator page (same browser only until a backend is added). Otherwise the bus moves in demo playback. The dashed line is schematic, not the road.</p></div>`;
  dropMap();if(typeof L==='undefined'){$('#map').innerHTML='<div class="empty">Map library did not load. Check your connection. The status above still updates.</div>'}
- else{MAP=L.map('map');L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap contributors'}).addTo(MAP);const pts=STOPS.map(x=>[x.lat,x.lng]);L.polyline(pts,{color:'#2563eb',weight:4,dashArray:'6 8'}).addTo(MAP);
-  STOPS.forEach(x=>L.circleMarker([x.lat,x.lng],{radius:7,color:'#0b1f4a',fillColor:'#fff',fillOpacity:1,weight:3}).addTo(MAP).bindTooltip(x.n,{permanent:false,direction:'right'}));
+ else{MAP=L.map('map');L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap contributors'}).addTo(MAP);const pts=SPk().map(x=>[x.lat,x.lng]);L.polyline(pts,{color:'#2563eb',weight:4,dashArray:'6 8'}).addTo(MAP);
+  SPk().forEach(x=>L.circleMarker([x.lat,x.lng],{radius:7,color:'#0b1f4a',fillColor:'#fff',fillOpacity:1,weight:3}).addTo(MAP).bindTooltip(x.n,{permanent:false,direction:'right'}));
   MARK=L.marker(pts[0],{icon:L.divIcon({html:'🚌',className:'busico',iconSize:[30,30]})}).addTo(MAP);MAP.fitBounds(pts,{padding:[30,30]})}
  moveBus()}
 /* ========= OPERATOR DASHBOARD ========= */
@@ -700,7 +714,7 @@ function rOps(){
  if(!UI.opDate){const lb=[...S.bookings].reverse().find(b=>b.status!=='Completed')||S.bookings[S.bookings.length-1];UI.opDate=lb?lb.tripId.split('|')[0]:today()}
  const date=UI.opDate,all=tripsFor(date),nact=x=>S.bookings.filter(b=>b.tripId===x.id&&b.status!=='Completed').length;
  if(!all.some(x=>x.id===UI.opTrip))UI.opTrip=(all.find(nact)||all[0]||{}).id||null;
- const tr=UI.opTrip&&tripById(UI.opTrip),lay=tr?layoutOf(tr):LAYOUTS.L50,PS=lay.seats-1,nseg=STOPS.length-1,f=UI.opStop==null?-1:Math.min(Math.max(+UI.opStop,-1),nseg-1);
+ const tr=UI.opTrip&&tripById(UI.opTrip),lay=tr?layoutOf(tr):LAYOUTS.L50,PS=lay.seats-1,nseg=SPop().length-1,f=UI.opStop==null?-1:Math.min(Math.max(+UI.opStop,-1),nseg-1);
  let trip='';
  if(tr){
   const flag=S.flags[tr.id],fi=flag&&S.incidents.find(i=>i.id===flag.inc),
@@ -716,23 +730,23 @@ function rOps(){
    rows=[...mine,...inc].sort((a,b)=>key(a)-key(b)||a.seat-b.seat),
    cell=n=>{if(n===DRIVER)return driverSeat;const lv=live.filter(b=>b.seat===n&&inSeg(b)),h=S.holds[hk(tr,n)],top=lv.find(b=>b.status==='Checked in')||lv.find(b=>b.status==='Booked')||lv[0],
     cls=top?(top.status==='Checked in'?'ci':top.status==='Offered'?'tr':'bk'):h?'held':'free',
-    lab=lv.length?`Seat ${n}: `+lv.map(b=>`${b.name} (${b.status==='Offered'?'transfer offered from '+b.fromBus:b.status}, ${STOPS[b.from].n} to ${STOPS[b.to].n})`).join('; '):`Seat ${n}, ${h?'held, not booked yet':'available'}`;
+    lab=lv.length?`Seat ${n}: `+lv.map(b=>`${b.name} (${b.status==='Offered'?'transfer offered from '+b.fromBus:b.status}, ${SPb(b)[b.from].n} to ${SPb(b)[b.to].n})`).join('; '):`Seat ${n}, ${h?'held, not booked yet':'available'}`;
     return`<div class="seat ${cls}" role="img" aria-label="${esc(lab)}" title="${esc(lab)}">${n}</div>`},
    xs=fi&&fi.xf?{a:fi.xf.filter(r=>r.status==='Accepted').length,d:fi.xf.filter(r=>r.status!=='Accepted'&&r.status!=='Offered').length,w:fi.xf.filter(r=>r.status==='Offered').length}:null,
-   flagBox=flag?`<div class="card" style="margin:14px 0 0;border-left:4px solid var(--red);background:var(--redbg)"><span class="badge r">${flag.type==='Mechanical'?'OUT OF SERVICE':'INCIDENT REPORTED'}</span> <b>${fi?esc(fi.type)+' near '+esc(STOPS[fi.stop].n):''}</b> <span class="mut">${fi?fi.ts:''}. New bookings on this bus are closed.</span>${xs?`<p style="margin:8px 0 0">Transfers: <b>${xs.a}</b> accepted · <b>${xs.d}</b> declined · <b>${xs.w}</b> waiting</p>`:''}<p style="margin:8px 0 0"><button class="btn g sm" data-act="reopen" data-id="${esc(tr.id)}">Reopen bus for booking</button></p></div>`:'';
-  trip=`${flagBox}<div class="card" style="margin:14px 0 10px;border-left:4px solid ${full?'var(--red)':'var(--teal)'}"><span class="badge ${full?'r':'g'}">${full?'BUS FULL':'Seats available'}</span> ${f<0?`<b>Whole route</b>: ${used} of ${PS} passenger seats have a booking on this trip.`:`<b>${STOPS[f].n} → ${STOPS[f+1].n}</b>: ${used} of ${PS} passenger seats taken, <b>${PS-used}</b> available.`} <span class="mut">Seat 1 is the driver seat and is not counted. Seat plan: ${lay.name}.</span>
-   <p class="mut" style="margin:8px 0 0">${fullSegs.length?`Fully booked on ${fullSegs.length} segment${fullSegs.length>1?'s':''}: ${fullSegs.map(i=>`${STOPS[i].n} → ${STOPS[i+1].n}`).join(', ')}.`:'No segment of this trip is fully booked.'}</p></div>
+   flagBox=flag?`<div class="card" style="margin:14px 0 0;border-left:4px solid var(--red);background:var(--redbg)"><span class="badge r">${flag.type==='Mechanical'?'OUT OF SERVICE':'INCIDENT REPORTED'}</span> <b>${fi?esc(fi.type)+' near '+esc(SPop()[fi.stop].n):''}</b> <span class="mut">${fi?fi.ts:''}. New bookings on this bus are closed.</span>${xs?`<p style="margin:8px 0 0">Transfers: <b>${xs.a}</b> accepted · <b>${xs.d}</b> declined · <b>${xs.w}</b> waiting</p>`:''}<p style="margin:8px 0 0"><button class="btn g sm" data-act="reopen" data-id="${esc(tr.id)}">Reopen bus for booking</button></p></div>`:'';
+  trip=`${flagBox}<div class="card" style="margin:14px 0 10px;border-left:4px solid ${full?'var(--red)':'var(--teal)'}"><span class="badge ${full?'r':'g'}">${full?'BUS FULL':'Seats available'}</span> ${f<0?`<b>Whole route</b>: ${used} of ${PS} passenger seats have a booking on this trip.`:`<b>${SPop()[f].n} → ${SPop()[f+1].n}</b>: ${used} of ${PS} passenger seats taken, <b>${PS-used}</b> available.`} <span class="mut">Seat 1 is the driver seat and is not counted. Seat plan: ${lay.name}.</span>
+   <p class="mut" style="margin:8px 0 0">${fullSegs.length?`Fully booked on ${fullSegs.length} segment${fullSegs.length>1?'s':''}: ${fullSegs.map(i=>`${SPop()[i].n} → ${SPop()[i+1].n}`).join(', ')}.`:'No segment of this trip is fully booked.'}</p></div>
   <div class="meta" style="margin-bottom:10px"><span class="badge o">Booked ${cnt('Booked')}</span><span class="badge b">Checked in ${cnt('Checked in')}</span><span class="badge g">Completed ${cnt('Completed')}</span><button class="btn r sm" data-act="incopen">Report accident / bus problem for this bus</button></div>
-  <h3>Passengers</h3><div class="card tw"><table><thead><tr><th>Seat</th><th>Passenger</th><th>Route</th><th>Payment</th><th>Status</th><th>Action</th></tr></thead><tbody>${rows.map(b=>{const off=b.status==='Offered',out=b.xfer&&b.xfer.status==='Offered';return`<tr ${b.status==='Checked in'&&b.exit?'style="background:var(--orgbg)"':''}><td><b>${b.seat}</b></td><td>${esc(b.name)}</td><td>${STOPS[b.from].n} → ${STOPS[b.to].n}</td><td>${payCell(b)}</td><td>${off?`<span class="badge o">Transfer offered</span> <span class="mut">from ${esc(b.fromBus)}</span>`:`<span class="badge ${b.status==='Completed'?'g':b.status==='Checked in'?'b':'o'}">${b.status}</span>${out?' <span class="badge o">Transfer offered</span>':''}${b.status==='Checked in'&&b.exit?' <span class="badge o">Getting off</span>':''}`}</td><td>${off||out?'<span class="mut">Waiting for passenger</span>':b.status==='Checked in'?`<button class="btn t sm" data-act="done" data-id="${b.id}">Completed</button>`:b.status==='Booked'?collectBtn(b):'✓'}</td></tr>`}).join('')||'<tr><td colspan="6" class="mut">No bookings on this trip yet. Seats booked by passengers appear here and on the seat map.</td></tr>'}</tbody></table></div>
-  <div class="split" style="margin-top:20px"><div class="opmap"><h3>Seat map · ${f<0?'whole route':esc(STOPS[f].n)+' → '+esc(STOPS[f+1].n)}</h3>${busGrid(cell,lay)}<div class="leg"><span><i style="background:var(--tealbg);border:1px solid var(--teal)"></i>Available</span><span><i style="background:#fff6d1;border:1px solid var(--yel)"></i>Booked</span><span><i style="background:var(--blue)"></i>Checked in</span><span><i style="background:#efe3ff;border:1px dashed #7c3aed"></i>Transfer offered</span><span><i style="background:var(--navy)"></i>Driver (1)</span></div><p class="mut" style="font-size:12.5px;text-align:center">Hover or focus a seat to see the passenger and segment.</p></div>
-  <div><h3>Seats taken by segment</h3><div class="card" style="padding:6px 14px">${seg.map((c,i)=>`<div class="segrow" ${i===f?'style="font-weight:700"':''}><span>${esc(STOPS[i].n)} → ${esc(STOPS[i+1].n)}</span><span class="segbar"><i class="${c>=PS?'full':''}" style="width:${Math.round(c/PS*100)}%"></i></span><span>${c}/${PS}</span>${c>=PS?'<span class="badge r">FULL</span>':'<span></span>'}</div>`).join('')}</div></div></div>`}
+  <h3>Passengers</h3><div class="card tw"><table><thead><tr><th>Seat</th><th>Passenger</th><th>Route</th><th>Payment</th><th>Status</th><th>Action</th></tr></thead><tbody>${rows.map(b=>{const off=b.status==='Offered',out=b.xfer&&b.xfer.status==='Offered';return`<tr ${b.status==='Checked in'&&b.exit?'style="background:var(--orgbg)"':''}><td><b>${b.seat}</b></td><td>${esc(b.name)}</td><td>${SPb(b)[b.from].n} → ${SPb(b)[b.to].n}</td><td>${payCell(b)}</td><td>${off?`<span class="badge o">Transfer offered</span> <span class="mut">from ${esc(b.fromBus)}</span>`:`<span class="badge ${b.status==='Completed'?'g':b.status==='Checked in'?'b':'o'}">${b.status}</span>${out?' <span class="badge o">Transfer offered</span>':''}${b.status==='Checked in'&&b.exit?' <span class="badge o">Getting off</span>':''}`}</td><td>${off||out?'<span class="mut">Waiting for passenger</span>':b.status==='Checked in'?`<button class="btn t sm" data-act="done" data-id="${b.id}">Completed</button>`:b.status==='Booked'?collectBtn(b):'✓'}</td></tr>`}).join('')||'<tr><td colspan="6" class="mut">No bookings on this trip yet. Seats booked by passengers appear here and on the seat map.</td></tr>'}</tbody></table></div>
+  <div class="split" style="margin-top:20px"><div class="opmap"><h3>Seat map · ${f<0?'whole route':esc(SPop()[f].n)+' → '+esc(SPop()[f+1].n)}</h3>${busGrid(cell,lay)}<div class="leg"><span><i style="background:var(--tealbg);border:1px solid var(--teal)"></i>Available</span><span><i style="background:#fff6d1;border:1px solid var(--yel)"></i>Booked</span><span><i style="background:var(--blue)"></i>Checked in</span><span><i style="background:#efe3ff;border:1px dashed #7c3aed"></i>Transfer offered</span><span><i style="background:var(--navy)"></i>Driver (1)</span></div><p class="mut" style="font-size:12.5px;text-align:center">Hover or focus a seat to see the passenger and segment.</p></div>
+  <div><h3>Seats taken by segment</h3><div class="card" style="padding:6px 14px">${seg.map((c,i)=>`<div class="segrow" ${i===f?'style="font-weight:700"':''}><span>${esc(SPop()[i].n)} → ${esc(SPop()[i+1].n)}</span><span class="segbar"><i class="${c>=PS?'full':''}" style="width:${Math.round(c/PS*100)}%"></i></span><span>${c}/${PS}</span>${c>=PS?'<span class="badge r">FULL</span>':'<span></span>'}</div>`).join('')}</div></div></div>`}
  const reports=S.incidents.slice(0,3);
  app.innerHTML=`<div class="wrap sec"><h2>Operator dashboard</h2><p class="mut">See who booked, who paid and checked in, and who is getting off. When a passenger has got off, press Completed. Updates also appear under the 🔔 bell.</p>
  <div class="fgrid" style="margin:12px 0;max-width:760px"><label>Date<input type="date" data-chg="opDate" value="${date}"></label>
  <label>Trip<select data-chg="opTrip">${all.map(x=>{const n=nact(x);return`<option value="${esc(x.id)}" ${tr&&x.id===tr.id?'selected':''}>${x.op.id} ${x.bus} · ${x.time}${S.flags[x.id]?' · OUT OF SERVICE':n?' · '+n+' active':''}</option>`}).join('')}</select></label>
- <label>Seat map for<select data-chg="opStop"><option value="-1" ${f<0?'selected':''}>Whole route (all booked seats)</option>${STOPS.slice(0,-1).map((x,i)=>`<option value="${i}" ${i===f?'selected':''}>${esc(x.n)} → ${esc(STOPS[i+1].n)}</option>`).join('')}</select></label></div>
+ <label>Seat map for<select data-chg="opStop"><option value="-1" ${f<0?'selected':''}>Whole route (all booked seats)</option>${SPop().slice(0,-1).map((x,i)=>`<option value="${i}" ${i===f?'selected':''}>${esc(x.n)} → ${esc(SPop()[i+1].n)}</option>`).join('')}</select></label></div>
  ${trip||'<div class="empty"><b>No trips on this date.</b></div>'}
- <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:24px"><h3 style="margin:0">Latest incident reports</h3><button class="btn g sm" data-act="nav" data-v="incidents">Open Accident Reports</button></div><div style="height:10px"></div><div class="list">${reports.length?reports.map(i=>{const t=tripById(i.tripId);return`<article class="card"><div class="meta"><span class="badge r">${esc(i.type)}</span><b style="color:var(--ink)">${esc(t.op.id)} ${t.bus} · ${t.date} ${t.time}</b><span>near ${esc(STOPS[i.stop].n)}</span><span>${i.ts}</span>${i.injured?'<span class="badge r">Injuries reported</span>':''}</div><p style="margin:6px 0">${esc(i.notes)}</p>${i.xf&&i.xf.length?`<p class="mut" style="margin:0">Transfer to ${esc(tripById(i.toTrip).bus)}: ${i.xf.map(r=>`${esc(r.name)} seat ${r.seat} → ${r.toSeat} (${r.status})`).join(' · ')}</p>`:''}</article>`}).join(''):'<div class="empty">No reports yet.</div>'}</div>
+ <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:24px"><h3 style="margin:0">Latest incident reports</h3><button class="btn g sm" data-act="nav" data-v="incidents">Open Accident Reports</button></div><div style="height:10px"></div><div class="list">${reports.length?reports.map(i=>{const t=tripById(i.tripId);return`<article class="card"><div class="meta"><span class="badge r">${esc(i.type)}</span><b style="color:var(--ink)">${esc(t.op.id)} ${t.bus} · ${t.date} ${t.time}</b><span>near ${esc(SPo(t)[i.stop].n)}</span><span>${i.ts}</span>${i.injured?'<span class="badge r">Injuries reported</span>':''}</div><p style="margin:6px 0">${esc(i.notes)}</p>${i.xf&&i.xf.length?`<p class="mut" style="margin:0">Transfer to ${esc(tripById(i.toTrip).bus)}: ${i.xf.map(r=>`${esc(r.name)} seat ${r.seat} → ${r.toSeat} (${r.status})`).join(' · ')}</p>`:''}</article>`}).join(''):'<div class="empty">No reports yet.</div>'}</div>
  <details style="margin-top:22px"><summary style="cursor:pointer;font-weight:700">More tools: ticket check, delay, GPS, activity log</summary>
  <div class="card" style="margin:12px 0"><h3>Check a ticket</h3><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn t sm" data-act="vscan">Scan QR with camera</button><input id="tc" placeholder="Or paste ticket code (LSB|BK…)" aria-label="Ticket code" style="flex:1;min-width:200px"><button class="btn g sm" data-act="vcode">Check</button></div><div id="cam"></div></div>
  <div class="meta" style="margin:12px 0"><button class="btn g sm" data-act="delay">Report 10 min delay</button><button class="btn g sm" data-act="gps">Share / stop sharing this device's GPS</button></div>
@@ -756,18 +770,18 @@ function incNew(tripId){const d=tripId?tripId.split('|')[0]:(UI.opDate||today())
  return{date:d,tripId:t,type:'Mechanical',stop:0,notes:'',injured:false,toTrip:null,assign:{}}}
 function rInci(){if(!UI.inc)UI.inc=incNew();let I=UI.inc,tr=tripById(I.tripId);if(!tr){I=UI.inc=incNew();tr=tripById(I.tripId)}
  const all=tripsFor(I.date),mech=I.type==='Mechanical',aff=affected(tr),out=isOut(tr),
-  cands=all.filter(x=>x.id!==tr.id&&!isOut(x)).sort((p,q)=>p.time.localeCompare(q.time)),to=I.toTrip&&tripById(I.toTrip),
+  cands=all.filter(x=>x.id!==tr.id&&!isOut(x)&&!!x.rev===!!tr.rev).sort((p,q)=>p.time.localeCompare(q.time)),to=I.toTrip&&tripById(I.toTrip),
   lo=aff.length?Math.min(...aff.map(b=>b.from)):0,hi=aff.length?Math.max(...aff.map(b=>b.to)):1,
   free=x=>{let n=0;for(let s=2;s<=seatsOf(x);s++)if(seatState(x,s,lo,hi)==='free')n++;return n};
  let tf='';
  if(mech){tf=`<h3 style="margin-top:18px">Transfer passengers to another bus</h3>`+(aff.length?`<p class="mut">${aff.length} passenger${aff.length>1?'s':''} on this bus. Their payment moves with them, so nothing more is charged. Each passenger gets the offer as a notification and can accept or decline. If they decline, their seat on the new bus goes back to other passengers and the fare is returned.</p>
   <label style="max-width:560px">Replacement bus<select data-chg="inc" data-f="toTrip"><option value="">Choose a bus…</option>${cands.map(x=>`<option value="${esc(x.id)}" ${x.id===I.toTrip?'selected':''} ${x.time<tr.time?'disabled':''}>${x.op.id} ${x.bus} · ${x.time} · ${layoutOf(x).name} · ${x.time<tr.time?'left earlier, cannot pick up passengers':free(x)+' free seats for this stretch'}</option>`).join('')}</select></label>
-  ${to?`<p class="mut" style="margin:10px 0 6px">Seat plan of ${esc(to.bus)}: ${layoutOf(to).name}. Seat numbers can change, so you choose each passenger's seat.</p><div class="card tw"><table><thead><tr><th>Passenger</th><th>Route</th><th>Now</th><th>Seat on ${esc(to.bus)}</th></tr></thead><tbody>${aff.map(b=>`<tr><td>${esc(b.name)}</td><td>${STOPS[b.from].n} → ${STOPS[b.to].n}</td><td>Seat ${b.seat}</td><td><select data-chg="incseat" data-id="${b.id}" aria-label="Seat for ${esc(b.name)}" style="width:auto"><option value="">Choose seat</option>${Array.from({length:seatsOf(to)-1},(_,k)=>k+2).filter(n=>n===I.assign[b.id]||seatOkFor(to,n,b,I.assign,aff)).map(n=>`<option value="${n}" ${n===I.assign[b.id]?'selected':''}>Seat ${n}</option>`).join('')}</select></td></tr>`).join('')}</tbody></table></div>`:''}`:'<p class="mut">No active passengers on this bus, so there is nothing to transfer.</p>')}
+  ${to?`<p class="mut" style="margin:10px 0 6px">Seat plan of ${esc(to.bus)}: ${layoutOf(to).name}. Seat numbers can change, so you choose each passenger's seat.</p><div class="card tw"><table><thead><tr><th>Passenger</th><th>Route</th><th>Now</th><th>Seat on ${esc(to.bus)}</th></tr></thead><tbody>${aff.map(b=>`<tr><td>${esc(b.name)}</td><td>${SPb(b)[b.from].n} → ${SPb(b)[b.to].n}</td><td>Seat ${b.seat}</td><td><select data-chg="incseat" data-id="${b.id}" aria-label="Seat for ${esc(b.name)}" style="width:auto"><option value="">Choose seat</option>${Array.from({length:seatsOf(to)-1},(_,k)=>k+2).filter(n=>n===I.assign[b.id]||seatOkFor(to,n,b,I.assign,aff)).map(n=>`<option value="${n}" ${n===I.assign[b.id]?'selected':''}>Seat ${n}</option>`).join('')}</select></td></tr>`).join('')}</tbody></table></div>`:''}`:'<p class="mut">No active passengers on this bus, so there is nothing to transfer.</p>')}
  const xf=S.incidents.flatMap(i=>i.xf||[]),cntx=f=>xf.filter(f).length,
   stat=(n,l,c)=>`<div class="card" style="padding:14px 16px;${c?'border-left:4px solid '+c:''}"><div style="font-size:1.7rem;font-weight:800;line-height:1.1">${n}</div><div class="mut" style="font-size:13px">${l}</div></div>`,
   F=UI.incF||'all',list=S.incidents.filter(i=>{const open=!!(S.flags[i.tripId]&&S.flags[i.tripId].inc===i.id);return F==='all'||(F==='open'&&open)||F===i.type}),
   hist=list.map(i=>{const t=tripById(i.tripId),open=!!(S.flags[i.tripId]&&S.flags[i.tripId].inc===i.id),waiting=(i.xf||[]).some(r=>r.status==='Offered');
-   return`<article class="card" style="border-left:4px solid ${open?'var(--red)':'var(--line)'}"><div class="meta"><span class="badge ${i.type==='Accident'?'r':'o'}">${esc(i.type)}</span><span class="badge ${open?'r':'g'}">${open?'Open: bus closed to bookings':'Closed'}</span><b style="color:var(--ink)">${esc(t.op.id)} ${t.bus} · ${t.date} ${t.time}</b><span>near ${esc(STOPS[i.stop].n)}</span><span>${i.ts}</span>${i.injured?'<span class="badge r">Injuries reported</span>':''}</div>
+   return`<article class="card" style="border-left:4px solid ${open?'var(--red)':'var(--line)'}"><div class="meta"><span class="badge ${i.type==='Accident'?'r':'o'}">${esc(i.type)}</span><span class="badge ${open?'r':'g'}">${open?'Open: bus closed to bookings':'Closed'}</span><b style="color:var(--ink)">${esc(t.op.id)} ${t.bus} · ${t.date} ${t.time}</b><span>near ${esc(SPo(t)[i.stop].n)}</span><span>${i.ts}</span>${i.injured?'<span class="badge r">Injuries reported</span>':''}</div>
    <p style="margin:8px 0 4px">${esc(i.notes)}</p><p class="mut" style="margin:0;font-size:13px">${i.notified!=null?i.notified+' passenger'+(i.notified===1?'':'s')+' notified.':''} ${i.closed?'Closed '+i.closed+'.':''}</p>
    ${i.xf&&i.xf.length?`<p class="mut" style="margin:8px 0 4px;font-size:13px">Transfer to ${esc(tripById(i.toTrip).op.id)} ${esc(tripById(i.toTrip).bus)} · ${tripById(i.toTrip).time}</p><div class="tw"><table><thead><tr><th>Passenger</th><th>Seat change</th><th>Answer</th></tr></thead><tbody>${i.xf.map(r=>`<tr><td>${esc(r.name)}</td><td>Seat ${r.seat} → ${r.toSeat}</td><td><span class="badge ${r.status==='Accepted'?'g':r.status==='Offered'?'o':'r'}">${r.status==='Offered'?'Waiting':esc(r.status)}</span></td></tr>`).join('')}</tbody></table></div>`:''}
    ${open?`<p style="margin:10px 0 0"><button class="btn g sm" data-act="reopen" data-id="${esc(i.tripId)}" ${waiting?'disabled':''}>Close report and reopen bus for booking</button>${waiting?' <span class="mut" style="font-size:12.5px">Waiting for passengers to answer their transfer offers.</span>':''}</p>`:''}</article>`}).join('');
@@ -778,7 +792,7 @@ function rInci(){if(!UI.inc)UI.inc=incNew();let I=UI.inc,tr=tripById(I.tripId);i
  <div class="fgrid" style="margin-top:12px"><label>Date<input type="date" data-chg="inc" data-f="date" value="${I.date}"></label>
  <label>Bus<select data-chg="inc" data-f="tripId">${all.map(x=>`<option value="${esc(x.id)}" ${x.id===tr.id?'selected':''}>${x.op.id} ${x.bus} · ${x.time}${isOut(x)?' · report open':''} · ${affected(x).length} active passengers</option>`).join('')}</select></label>
  <label>Type<select data-chg="inc" data-f="type"><option ${mech?'selected':''}>Mechanical</option><option ${mech?'':'selected'}>Accident</option></select></label>
- <label>Where (nearest stop)<select data-chg="inc" data-f="stop">${STOPS.map((x,i)=>`<option value="${i}" ${i===I.stop?'selected':''}>${esc(x.n)}</option>`).join('')}</select></label></div>
+ <label>Where (nearest stop)<select data-chg="inc" data-f="stop">${SPo(tr).map((x,i)=>`<option value="${i}" ${i===I.stop?'selected':''}>${esc(x.n)}</option>`).join('')}</select></label></div>
  <p class="mut" style="font-size:13px;margin:10px 0 0">${mech?'Mechanical problem: the bus is taken out of service and you can transfer passengers.':'Accident: the bus is closed to new bookings and every passenger on it is notified.'}</p>
  <label style="margin-top:12px">What happened<textarea data-chg="inc" data-f="notes" rows="3" placeholder="Short description for the record and for passengers">${esc(I.notes||'')}</textarea></label>
  ${mech?'':`<label class="chk" style="display:flex;gap:10px;align-items:center;margin-top:10px;text-transform:none;letter-spacing:normal"><input type="checkbox" data-chg="inc" data-f="injured" ${I.injured?'checked':''} style="width:auto;min-height:0">Anyone injured</label>`}
@@ -867,7 +881,7 @@ function incSend(){const I=UI.inc;if(!I||S.pax!=='OP')return;const tr=tripById(I
  if(notes.length<3)return toast('Describe what happened first.');
  let to=null;if(mech&&aff.length){to=I.toTrip&&tripById(I.toTrip);if(!to)return toast('Choose the replacement bus.');if(to.time<tr.time)return toast('That bus left before the broken bus and cannot pick up passengers. Choose a later bus.');
   for(const b of aff){const s=I.assign[b.id];if(!s||!seatOkFor(to,s,b,I.assign,aff))return toast(`Choose a free seat for ${b.name} on ${to.bus}.`)}}
- const id='INC'+nid(),label=`${tr.op.id} ${tr.bus} (${tr.time})`,where=`near ${STOPS[I.stop].n}`,inc={id,type:I.type,tripId:tr.id,stop:I.stop,notes,injured:!!I.injured,ts:stamp(),toTrip:to?to.id:null,xf:[]};
+ const id='INC'+nid(),label=`${tr.op.id} ${tr.bus} (${tr.time})`,where=`near ${SPo(tr)[I.stop].n}`,inc={id,type:I.type,tripId:tr.id,stop:I.stop,notes,injured:!!I.injured,ts:stamp(),toTrip:to?to.id:null,xf:[]};
  S.incidents.unshift(inc);inc.notified=mech?aff.length:S.bookings.filter(b=>b.tripId===tr.id&&['Booked','Checked in'].includes(b.status)).length;S.flags[tr.id]={type:I.type,inc:id,ts:stamp()};
  if(mech){aff.forEach(b=>{const seat=I.assign[b.id];b.xfer={inc:id,from:tr.id,fromSeat:b.seat,toTrip:to.id,toSeat:seat,status:'Offered',exp:Date.now()+OFFER_MIN*60000};inc.xf.push({bk:b.id,name:b.name,seat:b.seat,toSeat:seat,status:'Offered'});
    note(b.pax,`🔧 Your bus ${label} has a mechanical problem ${where}. Transfer offered: ${to.op.id} ${to.bus} at ${to.time}, Seat ${seat}. Your payment moves with you. Accept or decline in My Bookings within ${OFFER_MIN} minutes.`)})}
@@ -919,9 +933,9 @@ const ACT={
  reopen:d=>{if(S.pax!=='OP')return;const tr=tripById(d.id);if(S.bookings.some(b=>b.xfer&&b.xfer.from===tr.id))return toast('Transfer offers are still waiting for an answer.');{const ri=S.incidents.find(i=>i.id===(S.flags[tr.id]||{}).inc);if(ri)ri.closed=stamp()}delete S.flags[tr.id];logIt('Bus reopened for booking',tr.bus);render();toast('Bus reopened for booking.')},
  xferyes:d=>xferAccept(d.id),
  xferno:d=>{const b=S.bookings.find(x=>x.id===d.id&&x.pax===S.pax);if(!b||!b.xfer)return;if(!confirm('Decline the transfer? Your booking on this trip will end, the seats are released, and any fare you paid goes back to your transit card.'))return;xferDecline(b,'declined');render();toast('Transfer declined. Booking ended.')},
- gettingoff:d=>{const b=S.bookings.find(x=>x.id===d.id&&x.pax===S.pax);if(!b||b.status!=='Checked in'||b.exit||b.xfer)return;b.exit=stamp();const tr=tripById(b.tripId);opNote(`🚪 ${b.name} is getting off · Seat ${b.seat} · at ${STOPS[b.to].n} (${tr.op.id} ${tr.time})`,'out');note(b.pax,'The operator was told you are getting off.');render();toast('Operator notified.')},
+ gettingoff:d=>{const b=S.bookings.find(x=>x.id===d.id&&x.pax===S.pax);if(!b||b.status!=='Checked in'||b.exit||b.xfer)return;b.exit=stamp();const tr=tripById(b.tripId);opNote(`🚪 ${b.name} is getting off · Seat ${b.seat} · at ${SPb(b)[b.to].n} (${tr.op.id} ${tr.time})`,'out');note(b.pax,'The operator was told you are getting off.');render();toast('Operator notified.')},
  done:d=>{if(S.pax!=='OP')return;const b=S.bookings.find(x=>x.id===d.id);if(!b||b.status!=='Checked in'||b.xfer)return;const tr=tripById(b.tripId);b.status='Completed';b.doneAt=stamp();note(b.pax,`Trip completed. Thank you for riding ${tr.op.id}.`);logIt('Completed',`${b.id} seat ${b.seat}`);
-  S.watch=S.watch.filter(w=>{if(w.tripId===b.tripId&&w.seat===b.seat&&w.from>=b.to){note(w.pax,`Seat ${w.seat} is ready for you on ${tr.op.id} from ${STOPS[w.from].n}. Book it now.`);return false}return true});render();toast(`Seat ${b.seat} completed and released.`)},
+  S.watch=S.watch.filter(w=>{if(w.tripId===b.tripId&&w.seat===b.seat&&w.from>=b.to){note(w.pax,`Seat ${w.seat} is ready for you on ${tr.op.id} from ${SPb(w)[w.from].n}. Book it now.`);return false}return true});render();toast(`Seat ${b.seat} completed and released.`)},
  delay:()=>{const tr=tripById(UI.opTrip);S.bookings.filter(b=>b.tripId===tr.id&&b.status!=='Completed').forEach(b=>note(b.pax,`${tr.op.id} ${tr.bus} is delayed by about 10 minutes.`));logIt('Delay reported',tr.bus);render();toast('Delay reported to passengers.')},
  topup:d=>{const n=PAX[S.pax].card;S.cards[n].bal+=+d.a;S.txs.unshift({ref:'TX-'+(100000+nid()),card:n,amt:+d.a,status:'Successful',type:'topup',ts:stamp(),desc:'Top-up (simulated)'});render();toast('Top-up added (simulated).')},
  block:()=>{if(!confirm('Block this card? You cannot undo this in the demo.'))return;S.cards[PAX[S.pax].card].status='Blocked';logIt('Card blocked',mask(PAX[S.pax].card));render()},
@@ -933,24 +947,24 @@ document.addEventListener('change',e=>{const k=e.target.dataset.chg;if(!k)return
 document.addEventListener('input',e=>{if(e.target.id==='prog'){UI.prog=e.target.value/1000;moveBus();return}if(e.target.dataset.inp==='q'){UI.q=e.target.value;const p=e.target.selectionStart;rRoutes();const q=$('#q');q.focus();q.setSelectionRange(p,p)}});
 /* ----- From / To: type to search stops, tap a suggestion ----- */
 const nz=s=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
-STOPS.forEach(s=>{s.k1=nz(s.n+' '+(s.a||[]).join(' '));s.k2=nz(s.m)});
-const SG={w:null,list:[],act:-1,dirty:false},sgOk=(w,i)=>w==='f'?i<STOPS.length-1:i>(UI.f==null?0:UI.f);
+STOPS.concat(RSTOPS).forEach(s=>{s.k1=nz(s.n+' '+(s.a||[]).join(' '));s.k2=nz(s.m)});
+const SG={w:null,list:[],act:-1,dirty:false},sgOk=(w,i)=>w==='f'?i<FS().length-1:i>(UI.f==null?0:UI.f);
 function sgMatch(q){const t=nz(q).split(' ').filter(Boolean),j=t.join(' ');
- return STOPS.map((s,i)=>{if(!t.length)return{i,r:0};const nm=nz(s.n),w1=s.k1.split(' '),w2=s.k2.split(' ');
+ return FS().map((s,i)=>{if(!t.length)return{i,r:0};const nm=nz(s.n),w1=s.k1.split(' '),w2=s.k2.split(' ');
   if(!t.every(x=>w1.some(y=>y.startsWith(x))||w2.some(y=>y.startsWith(x))))return null;
   return{i,r:nm===j?-1:nm.startsWith(j)?0:t.every(x=>w1.some(y=>y.startsWith(x)))?1:2}}).filter(Boolean).sort((a,b)=>a.r-b.r||a.i-b.i)}
 function sgOpen(w,keep){const inp=$('#sf-'+w),ul=$('#sf-'+w+'-l');if(!inp||!ul)return;
  if(!SG.dirty||!inp.value.trim()){ul.hidden=true;inp.setAttribute('aria-expanded','false');inp.removeAttribute('aria-activedescendant');if(SG.w===w){SG.w=null;SG.act=-1}return}
  const all=sgMatch(SG.dirty?inp.value:''),ok=all.filter(m=>sgOk(w,m.i)),shown=SG.dirty?ok.slice(0,8):ok;
  SG.w=w;SG.list=shown.map(m=>m.i);if(!keep)SG.act=SG.dirty&&shown.length?0:-1;
- ul.innerHTML=shown.length?shown.map((m,k)=>{const s=STOPS[m.i];return`<li role="option" id="sf-${w}-o${k}" data-sgi="${m.i}" aria-selected="${k===SG.act}">${esc(s.n)}${nz(s.m).startsWith(nz(s.n))?'':`<small>${esc(s.m)}</small>`}</li>`}).join(''):
-  `<li class="none" role="option" aria-disabled="true">${all.length?(w==='t'?'Buses on this route only go toward '+esc(STOPS[STOPS.length-1].n)+', so you can’t go there from '+esc(STOPS[UI.f==null?0:UI.f].n)+'.':'That is the last stop, so nobody boards there.'):'No matching stop. Try another spelling.'}</li>`;
+ ul.innerHTML=shown.length?shown.map((m,k)=>{const s=FS()[m.i];return`<li role="option" id="sf-${w}-o${k}" data-sgi="${m.i}" aria-selected="${k===SG.act}">${esc(s.n)}${nz(s.m).startsWith(nz(s.n))?'':`<small>${esc(s.m)}</small>`}</li>`}).join(''):
+  `<li class="none" role="option" aria-disabled="true">${all.length?(w==='t'?'Buses on this route only go toward '+esc(FS()[FS().length-1].n)+', so you can’t go there from '+esc(FS()[UI.f==null?0:UI.f].n)+'.':'That is the last stop, so nobody boards there.'):'No matching stop. Try another spelling.'}</li>`;
  ul.hidden=false;inp.setAttribute('aria-expanded','true');SG.act>=0?inp.setAttribute('aria-activedescendant',`sf-${w}-o${SG.act}`):inp.removeAttribute('aria-activedescendant')}
 function sgClose(){document.querySelectorAll('.sgl').forEach(u=>u.hidden=true);document.querySelectorAll('.sg input').forEach(i=>{i.setAttribute('aria-expanded','false');i.removeAttribute('aria-activedescendant')});SG.w=null;SG.act=-1}
 function sgCommit(w,i,fire){if(w==='f'){UI.f=i;if(UI.t==null||UI.t<=i){UI.t=null;const t=$('#sf-t');if(t)t.value=''}}else UI.t=i;
- const el=$('#sf-'+w);if(el)el.value=STOPS[i].n;SG.dirty=false;if(SG.w===w)sgClose();if(fire&&el)el.dispatchEvent(new Event('change',{bubbles:true}))}
+ const el=$('#sf-'+w);if(el)el.value=FS()[i].n;SG.dirty=false;if(SG.w===w)sgClose();if(fire&&el)el.dispatchEvent(new Event('change',{bubbles:true}))}
 function sgResolve(w,first){const el=$('#sf-'+w);if(!el)return null;const q=nz(el.value);if(!q)return null;
- const all=sgMatch(el.value).filter(m=>sgOk(w,m.i)),ex=all.find(m=>nz(STOPS[m.i].n)===q||(STOPS[m.i].a||[]).some(a=>nz(a)===q)),hit=ex||(first&&all[0]);return hit?hit.i:null}
+ const all=sgMatch(el.value).filter(m=>sgOk(w,m.i)),ex=all.find(m=>nz(FS()[m.i].n)===q||(FS()[m.i].a||[]).some(a=>nz(a)===q)),hit=ex||(first&&all[0]);return hit?hit.i:null}
 document.addEventListener('focusin',e=>{const id=e.target.id;if(id==='sf-f'||id==='sf-t'){SG.dirty=false;const el=e.target;setTimeout(()=>el.select(),0);sgClose()}});
 document.addEventListener('input',e=>{const id=e.target.id;if(id==='sf-f'||id==='sf-t'){SG.dirty=true;sgOpen(id.slice(3))}});
 document.addEventListener('keydown',e=>{const id=e.target.id;if(id!=='sf-f'&&id!=='sf-t')return;const w=id.slice(3),ul=$('#sf-'+w+'-l'),open=!!ul&&!ul.hidden;
@@ -966,8 +980,9 @@ document.addEventListener('submit',e=>{if(e.target.id!=='sf')return;e.preventDef
  UI.f=f;const t=sgResolve('t',true);
  if(t==null){const tx=$('#sf-t').value;return msg.textContent=tx&&sgMatch(tx).length?'Choose a destination that comes after your boarding stop.':'Choose your destination (To) from the suggestions.'}
  if(!$('#sf-d').value||$('#sf-d').value<today())return msg.textContent='Choose today or a later date.';
- UI.t=t;$('#sf-f').value=STOPS[f].n;$('#sf-t').value=STOPS[t].n;msg.textContent=sfMsg();
+ UI.t=t;$('#sf-f').value=FS()[f].n;$('#sf-t').value=FS()[t].n;msg.textContent=sfMsg();
  Object.assign(UI,{date:$('#sf-d').value,op:$('#sf-o').value,slot:$('#sf-s').value});res()});
+document.addEventListener('change',e=>{if(e.target.id==='sf-r'){UI.rev=+e.target.value;UI.f=UI.t=null;rFind()}});
 
 dlg.addEventListener('close',()=>{if(UI.mode==='seat'){for(const k in S.holds)if(S.holds[k].pax===S.pax)delete S.holds[k];UI.seat=null;save();if(S.view==='find')res()}UI.mode=''});
 /* trip countdowns: update every 20 s; when a bus passes the stop, refresh the list so it drops out */
@@ -1006,7 +1021,7 @@ const scopeNow=()=>UI.opScope==='day'||!UI.opTrip?{date:UI.opDate}:{trip:UI.opTr
 /* ---- passenger: choose how to pay ---- */
 function openPay(id){const b=S.bookings.find(x=>x.id===id&&x.pax===S.pax);if(!b)return;if(b.status!=='Booked')return toast('This booking is already paid.');if(b.xfer)return toast('Respond to the transfer offer first.');
  const tr=tripById(b.tripId),c=S.cards[PAX[S.pax].card],low=!c||c.bal<b.fare;UI.mode='pay';
- openDlg(`<div class="dh"><h3 style="margin:0">Pay ${peso(b.fare)}</h3><button class="btn g sm" data-act="close">Close</button></div><div class="db"><dl><dt>Trip</dt><dd>${esc(tr.op.id)} · ${tr.date} ${tr.time}</dd><dt>Route</dt><dd>${STOPS[b.from].n} → ${STOPS[b.to].n}</dd><dt>Base fare</dt><dd>${peso(b.base)}</dd><dt>Discount (${b.cat})</dt><dd>−${peso(b.disc)}</dd><dt>You pay</dt><dd style="font-size:1.2rem">${peso(b.fare)}</dd></dl>
+ openDlg(`<div class="dh"><h3 style="margin:0">Pay ${peso(b.fare)}</h3><button class="btn g sm" data-act="close">Close</button></div><div class="db"><dl><dt>Trip</dt><dd>${esc(tr.op.id)} · ${tr.date} ${tr.time}</dd><dt>Route</dt><dd>${SPb(b)[b.from].n} → ${SPb(b)[b.to].n}</dd><dt>Base fare</dt><dd>${peso(b.base)}</dd><dt>Discount (${b.cat})</dt><dd>−${peso(b.disc)}</dd><dt>You pay</dt><dd style="font-size:1.2rem">${peso(b.fare)}</dd></dl>
  <div class="pms"><button class="pm" data-act="payme" data-m="card" data-id="${b.id}" ${low?'disabled':''}><b>💳 Transit card</b><span>Balance ${c?peso(c.bal):'none linked'} · exact fare, no change${low?' · balance too low':''}</span></button>
  <button class="pm" data-act="payme" data-m="ew" data-id="${b.id}"><b>📱 GCash / Maya (simulated)</b><span>Exact fare · instant receipt</span></button>
  <button class="pm" data-act="payme" data-m="cash" data-id="${b.id}"><b>💵 Cash on board</b><span>The conductor records what you hand over and your change. You see the same record here.</span></button></div>
@@ -1027,7 +1042,7 @@ const trail=b=>`<h4 style="margin:6px 0 0">Payment trail</h4><ol class="trail">$
 const collectBtn=b=>`<button class="btn t sm" data-act="collect" data-id="${b.id}">Collect ${peso(b.fare)}</button>`;
 const payCell=b=>b.pay==='Paid'?`${peso(b.fare)} <span class="chip">${b.method||'Card'}</span>${b.chg>0?`<br><small class="mut">change ${peso(b.chg)} · ${CHM[b.chgMode]}</small>`:''}`:`<span class="mut">Unpaid</span>${b.plan?' <span class="chip c">💵 pays cash</span>':''}`;
 function openCollect(id){const b=S.bookings.find(x=>x.id===id);if(S.pax!=='OP'||!b||b.status!=='Booked')return;const c=S.cards[(PAX[b.pax]||{}).card],ok=c&&c.status==='Active';UI.col={id};UI.mode='col';
- openDlg(`<div class="dh"><h3 style="margin:0">Collect cash · ${esc(b.name)}</h3><button class="btn g sm" data-act="close">Close</button></div><div class="db"><dl><dt>Booking</dt><dd>${b.id} · Seat ${b.seat}</dd><dt>Route</dt><dd>${STOPS[b.from].n} → ${STOPS[b.to].n}</dd><dt>Fare due (${b.cat})</dt><dd style="font-size:1.2rem">${peso(b.fare)}</dd></dl>
+ openDlg(`<div class="dh"><h3 style="margin:0">Collect cash · ${esc(b.name)}</h3><button class="btn g sm" data-act="close">Close</button></div><div class="db"><dl><dt>Booking</dt><dd>${b.id} · Seat ${b.seat}</dd><dt>Route</dt><dd>${SPb(b)[b.from].n} → ${SPb(b)[b.to].n}</dd><dt>Fare due (${b.cat})</dt><dd style="font-size:1.2rem">${peso(b.fare)}</dd></dl>
  <label>Cash received<input id="tend" inputmode="decimal" placeholder="0.00" autocomplete="off"></label>
  <div class="quick"><button class="btn g sm" data-act="tend" data-v="${b.fare}">Exact</button>${[20,50,100,200,500,1000].map(v=>`<button class="btn g sm" data-act="tend" data-v="${v}">₱${v}</button>`).join('')}</div>
  <div id="change" class="change"></div>
@@ -1108,7 +1123,7 @@ const rCur=()=>({ops:rOps,earn:rEarn,audit:rAudit})[S.view]?.();
 document.addEventListener('change',e=>{const k=e.target.dataset.chg;if(k==='eDate'){UI.opDate=e.target.value||today();UI.opTrip=null;rEarn()}if(k==='eTrip'){UI.opTrip=e.target.value;rEarn()}});
 const _book=book;book=function(){const n=S.bookings.length;_book();if(S.bookings.length>n){const b=S.bookings[S.bookings.length-1];post({kind:'BOOKED',bk:b.id,trip:b.tripId,name:b.name,cat:b.cat,amt:0,base:b.base,disc:b.disc,note:`Seat ${b.seat} · fare due ${peso(b.fare)}`})}};ACT.book=book;
 const _xd=xferDecline;xferDecline=function(b,why){const p=b.pay==='Paid',a=b.fare,m=b.method||'Card',id=b.id,tp=b.tripId,nm=b.name,cash=m==='Cash';_xd.apply(this,arguments);if(p)post({kind:'REFUND',bk:id,trip:tp,name:nm,method:m,amt:a,owe:cash?a:0,mode:cash?'owed':'card',note:`Bus transfer ${why}. `+(cash?'Cash refund owed to passenger':'Returned to payer')})};
-const _done=ACT.done;ACT.done=d=>{const b=S.bookings.find(x=>x.id===d.id),was=b&&b.status;_done(d);if(b&&was==='Checked in'&&b.status==='Completed'){post({kind:'COMPLETED',bk:b.id,trip:b.tripId,name:b.name,amt:0,note:`Seat ${b.seat} released at ${STOPS[b.to].n}`});if(S.view==='ops')rOps()}};
+const _done=ACT.done;ACT.done=d=>{const b=S.bookings.find(x=>x.id===d.id),was=b&&b.status;_done(d);if(b&&was==='Checked in'&&b.status==='Completed'){post({kind:'COMPLETED',bk:b.id,trip:b.tripId,name:b.name,amt:0,note:`Seat ${b.seat} released at ${SPb(b)[b.to].n}`});if(S.view==='ops')rOps()}};
 Object.assign(ACT,{
  paybk:d=>openPay(d.id),
  payme:d=>{if(d.m==='card')return payBooking(d.id);if(d.m==='ew')return payEw(d.id);const b=S.bookings.find(x=>x.id===d.id&&x.pax===S.pax);if(!b)return;b.plan='Cash';const tr=tripById(b.tripId);opNote(`💵 ${b.name} will pay ${peso(b.fare)} cash · Seat ${b.seat} (${tr.op.id} ${tr.time})`,'booked');dlg.close();render();toast('The conductor was told you will pay cash.')},
@@ -1172,14 +1187,14 @@ function drvCheck(){
  if(S.pax!=='DRV'||S.view!=='drive')return;const p=drvPending();
  if(!p.length){if(dlgA.open)dlgA.close();clearInterval(alertTimer);alertTimer=null;return}
  const a=p[0],first=dlgA.dataset.id!==a.id;
- dlgA.innerHTML=`<div class="dva" role="alertdialog" aria-live="assertive"><div class="dva-t">🚨 NEW PASSENGER</div><div class="dva-s"><small>SEAT</small>${a.seat}</div><div class="dva-n">${esc(a.name)}</div><div class="dva-r">Boards at <b>${esc(STOPS[a.from].n)}</b> · gets off at <b>${esc(STOPS[a.to].n)}</b></div>${p.length>1?`<div class="dva-r">+${p.length-1} more waiting</div>`:''}<button type="button" data-act="dack" data-id="${esc(a.id)}" autofocus>Got it</button></div>`;
+ dlgA.innerHTML=`<div class="dva" role="alertdialog" aria-live="assertive"><div class="dva-t">🚨 NEW PASSENGER</div><div class="dva-s"><small>SEAT</small>${a.seat}</div><div class="dva-n">${esc(a.name)}</div><div class="dva-r">Boards at <b>${esc(SPb(a)[a.from].n)}</b> · gets off at <b>${esc(SPb(a)[a.to].n)}</b></div>${p.length>1?`<div class="dva-r">+${p.length-1} more waiting</div>`:''}<button type="button" data-act="dack" data-id="${esc(a.id)}" autofocus>Got it</button></div>`;
  if(!dlgA.open)dlgA.showModal();
  if(first){dlgA.dataset.id=a.id;chime('new');speak(`New passenger. Seat ${a.seat}.`);navigator.vibrate&&navigator.vibrate([400,150,400,150,400]);
   clearInterval(alertTimer);alertTimer=setInterval(()=>{if(dlgA.open)chime('new')},7000)}}
 function rDrive(){
  if(!UI.drvDate)UI.drvDate=(([...S.bookings].reverse().find(b=>b.status!=='Completed'))||{tripId:today()}).tripId.split('|')[0];
  const all=tripsFor(UI.drvDate);if(!all.some(x=>x.id===UI.drvTrip))UI.drvTrip=(all.find(x=>S.bookings.some(b=>b.tripId===x.id&&b.status!=='Completed'))||all[0]).id;
- const tr=tripById(UI.drvTrip),lay=layoutOf(tr),PS=lay.seats-1,last=STOPS.length-1,cur=Math.min(dState(tr).stop,last),nxt=Math.min(cur+1,last),
+ const tr=tripById(UI.drvTrip),lay=layoutOf(tr),PS=lay.seats-1,last=SPo(tr).length-1,cur=Math.min(dState(tr).stop,last),nxt=Math.min(cur+1,last),
   live=S.bookings.filter(b=>b.tripId===tr.id&&b.status!=='Completed'),inSeg=(b,i)=>b.from<=i&&i<b.to,
   used=i=>new Set(live.filter(b=>inSeg(b,i)).map(b=>b.seat)),usedNow=used(cur),
   freeNow=PS-usedNow.size,freeSoon=cur<last-1?PS-used(nxt).size:PS,
@@ -1187,32 +1202,32 @@ function rDrive(){
   due=live.filter(b=>b.to<=nxt&&b.from<=cur).sort((a,b)=>a.seat-b.seat),onboard=live.filter(b=>inSeg(b,cur)).length,
   cell=n=>{if(n===DRIVER)return driverSeat;const lv=live.filter(b=>b.seat===n),d=lv.find(b=>b.to<=nxt&&b.from<=cur),r=lv.find(b=>inSeg(b,cur)),l=lv.find(b=>b.from>cur),
    cls=d?'off':r?(r.status==='Checked in'?'ci':'bk'):l?'bk':'free',
-   lab=`Seat ${n}: `+(lv.length?lv.map(b=>`${b.name}, ${STOPS[b.from].n} to ${STOPS[b.to].n}`).join('; '):'available');return`<div class="seat ${cls}" role="img" aria-label="${esc(lab)}" title="${esc(lab)}">${n}</div>`},
+   lab=`Seat ${n}: `+(lv.length?lv.map(b=>`${b.name}, ${SPb(b)[b.from].n} to ${SPb(b)[b.to].n}`).join('; '):'available');return`<div class="seat ${cls}" role="img" aria-label="${esc(lab)}" title="${esc(lab)}">${n}</div>`},
   seatsAt=(arr)=>arr.sort((a,b)=>a.seat-b.seat).map(b=>`<span class="dv-chip ${arr===null?'':''}" title="${esc(b.name)}">${b.seat}</span>`).join('');
- const rows=STOPS.map((s,i)=>{const off=live.filter(b=>b.to===i),on=live.filter(b=>b.from===i),cls=i<cur?'past':i===cur?'here':i===nxt?'nx':'';
+ const rows=SPo(tr).map((s,i)=>{const off=live.filter(b=>b.to===i),on=live.filter(b=>b.from===i),cls=i<cur?'past':i===cur?'here':i===nxt?'nx':'';
   return`<div class="dv-st ${cls}"><i></i><div><b>${esc(s.n)}</b> <span class="mut" style="font-size:12px">${s.km} km</span><div>${off.length?`<span class="mut" style="font-size:12px">Off</span> ${off.sort((a,b)=>a.seat-b.seat).map(b=>`<span class="dv-chip o">${b.seat}</span>`).join('')}`:''}${on.length?` <span class="mut" style="font-size:12px">On</span> ${on.sort((a,b)=>a.seat-b.seat).map(b=>`<span class="dv-chip">${b.seat}</span>`).join('')}`:''}</div></div>${i===cur?'<span class="badge g">Here</span>':`<button class="btn g sm" data-act="darrive" data-s="${i}">📣 Announce</button>`}</div>`}).join('');
  const fl=S.flags[tr.id];
  app.innerHTML=`<div class="wrap sec"><h2>Driver cab</h2><p class="mut" style="max-width:70ch">Seats left on your bus, who is getting off, and one tap to announce the stop. New bookings pop up full screen with a sound.</p>
  <div class="fgrid" style="margin:12px 0;max-width:620px"><label>Date<input type="date" data-chg="drvDate" value="${UI.drvDate}"></label><label>Your trip<select data-chg="drvTrip">${all.map(x=>`<option value="${esc(x.id)}" ${x.id===tr.id?'selected':''}>${x.op.id} ${x.bus} · ${x.time}</option>`).join('')}</select></label></div>
  ${fl?'<div class="card" style="border-left:4px solid var(--red);background:var(--redbg)"><span class="badge r">INCIDENT REPORTED</span> New bookings on this bus are closed.</div>':''}
- <div class="dv-hero"><div><small>${cur>=last?'End of the line':'Next stop'}</small><div class="dv-nx">${esc(STOPS[nxt].n)}</div>
-  ${cur>=last?'':`<button class="dv-big" data-act="darrive" data-s="${nxt}">📣 We've arrived at ${esc(STOPS[nxt].n)}: announce</button>`}
+ <div class="dv-hero"><div><small>${cur>=last?'End of the line':'Next stop'}</small><div class="dv-nx">${esc(SPo(tr)[nxt].n)}</div>
+  ${cur>=last?'':`<button class="dv-big" data-act="darrive" data-s="${nxt}">📣 We've arrived at ${esc(SPo(tr)[nxt].n)}: announce</button>`}
   <p style="margin:12px 0 0;font-size:14px">${due.length?`<b>Getting off here:</b> ${seatsAt(due).replace(/dv-chip/g,'dv-chip o')} ${due.map(b=>esc(b.name.split(' ')[0])).join(', ')}`:'Nobody is getting off at the next stop.'}</p></div>
   <div class="dv-k"><div><b>${freeNow}</b><span>seats free now (of ${PS})</span></div><div><b>${freeSoon}</b><span>free after next stop</span></div><div><b>${onboard}</b><span>passengers on board</span></div><div><b>${due.length}</b><span>getting off next</span></div></div></div>
  <div class="meta" style="margin-bottom:12px"><button class="btn g sm" data-act="dsnd">${SND?'🔊 Sound on':'🔇 Sound off'}</button><button class="btn g sm" data-act="dtest">Test new-passenger alert</button><button class="btn g sm" data-act="dreset">Back to first stop</button></div>
  <div class="card" style="padding:14px"><b>Free seats right now:</b> ${freeList.length?freeList.map(s=>`<span class="dv-chip">${s}</span>`).join(''):'<span class="badge r">BUS FULL</span>'}</div>
- <div class="split" style="margin-top:18px"><div class="opmap"><h3>Seat map · ${esc(STOPS[cur].n)} → ${esc(STOPS[nxt].n)}</h3>${busGrid(cell,lay)}<div class="leg"><span><i style="background:var(--tealbg);border:1px solid var(--teal)"></i>Free</span><span><i style="background:#fff6d1;border:1px solid var(--yel)"></i>Booked</span><span><i style="background:var(--blue)"></i>Paid</span><span><i style="background:var(--org)"></i>Getting off</span></div></div>
+ <div class="split" style="margin-top:18px"><div class="opmap"><h3>Seat map · ${esc(SPo(tr)[cur].n)} → ${esc(SPo(tr)[nxt].n)}</h3>${busGrid(cell,lay)}<div class="leg"><span><i style="background:var(--tealbg);border:1px solid var(--teal)"></i>Free</span><span><i style="background:#fff6d1;border:1px solid var(--yel)"></i>Booked</span><span><i style="background:var(--blue)"></i>Paid</span><span><i style="background:var(--org)"></i>Getting off</span></div></div>
  <div><h3>Stops</h3><div class="card" style="padding:6px 14px;max-height:560px;overflow:auto">${rows}</div></div></div></div>`;
  setTimeout(drvCheck,0)}
 Object.assign(ACT,{
- darrive:d=>{const tr=tripById(UI.drvTrip),i=+d.s,s=STOPS[i],off=S.bookings.filter(b=>b.tripId===tr.id&&b.to===i&&b.status!=='Completed').sort((a,b)=>a.seat-b.seat),seats=off.map(b=>b.seat);
+ darrive:d=>{const tr=tripById(UI.drvTrip),i=+d.s,s=SPo(tr)[i],off=S.bookings.filter(b=>b.tripId===tr.id&&b.to===i&&b.status!=='Completed').sort((a,b)=>a.seat-b.seat),seats=off.map(b=>b.seat);
   dState(tr).stop=i;chime('stop');
   setTimeout(()=>{speak(`Now arriving at ${s.n}.`+(seats.length?` Seat ${seats.join(', ')}, please get ready to get off.`:''));speak(`Paparating na tayo sa ${s.n}.`+(seats.length?' Para sa mga bababa, maghanda na po.':''),'fil-PH')},1000);
   off.forEach(b=>note(b.pax,`📣 Now arriving at ${s.n}. Get ready to get off (Seat ${b.seat}).`));
   S.log.unshift({ts:stamp(),who:who(),action:'Stop announced: '+s.n,rec:tr.bus});render();toast('Announced: '+s.n)},
  dack:d=>{const s=acked();s.add(d.id);localStorage.setItem(ACKK,JSON.stringify([...s].slice(-200)));dlgA.dataset.id='';drvCheck()},
  dsnd:()=>{SND=!SND;if(!SND)speechSynthesis&&speechSynthesis.cancel();else chime('stop');rDrive()},
- dtest:()=>{const tr=tripById(UI.drvTrip);drvAlert({id:'TEST'+Date.now(),seat:14,name:'Sample Passenger',from:4,to:STOPS.length-1},tr);save();drvCheck()},
+ dtest:()=>{const tr=tripById(UI.drvTrip);drvAlert({id:'TEST'+Date.now(),seat:14,name:'Sample Passenger',from:4,to:SPo(tr).length-1},tr);save();drvCheck()},
  dreset:()=>{dState(tripById(UI.drvTrip)).stop=0;render()}});
 document.addEventListener('change',e=>{const k=e.target.dataset.chg;if(k==='drvTrip'){UI.drvTrip=e.target.value;rDrive()}if(k==='drvDate'){UI.drvDate=e.target.value||today();UI.drvTrip=null;rDrive()}});
 /* live sync: a passenger books in another tab/window and this cab updates (no save() here, so tabs cannot ping-pong) */
